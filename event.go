@@ -3,7 +3,6 @@ package asyncp
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"reflect"
 )
 
@@ -26,6 +25,9 @@ type Event interface {
 
 	// WithPayload returns new event object with extended payload context
 	WithPayload(payload interface{}) Event
+
+	// WithError returns new event object with extended error value
+	WithError(err error) Event
 
 	// SetComplete marks event as complited or no
 	SetComplete(b bool)
@@ -56,13 +58,13 @@ type event struct {
 
 // WithPayload returns new event object with payload data
 func WithPayload(eventName string, data interface{}) Event {
-	if payload, ok := data.(Payload); ok {
-		return &event{
-			name:    eventName,
-			payload: payload,
-		}
+	var (
+		err     error
+		payload Payload
+	)
+	if payload, _ = data.(Payload); payload == nil {
+		payload, err = newPayload(data)
 	}
-	payload, err := newPayload(data)
 	return &event{
 		name:    eventName,
 		payload: payload,
@@ -140,7 +142,7 @@ func (ev *event) WithPayload(data interface{}) Event {
 	return newEvent
 }
 
-// WithError returns new event with error
+// WithError returns new event object with extended error value
 func (ev *event) WithError(err error) Event {
 	newEvent := ev.Copy()
 	newEvent.err = err
@@ -231,18 +233,4 @@ func subidByTask(parentID string, task Task) string {
 		return parentID + id.TaskSubID()
 	}
 	return parentID + reflect.TypeOf(task).String()
-}
-
-func errorString(err error) string {
-	if err == nil {
-		return ``
-	}
-	return err.Error()
-}
-
-func stringError(msg string) error {
-	if msg == `` {
-		return nil
-	}
-	return errors.New(msg)
 }

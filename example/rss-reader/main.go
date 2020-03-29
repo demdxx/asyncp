@@ -60,7 +60,10 @@ func downloadRSSList(ctx context.Context, event asyncp.Event, responseWriter asy
 		fmt.Println("Link:       ", channel.Link)
 		fmt.Println("Description:", channel.Description)
 		for _, item := range channel.Item {
-			responseWriter.WriteResonse(item)
+			err := responseWriter.WriteResonse(item)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -116,10 +119,10 @@ func main() {
 		Then(asyncp.FuncTask(downloadRSSItem)).
 		Then(asyncp.FuncTask(printResults)).
 		Then(closeAction(proxy))
-	mx.Failver(asyncp.Retranslator(mempr.Publisher()))
+	_ = mx.Failver(asyncp.Retranslator(mempr.Publisher()))
 
-	mempr.Publisher().Publish(context.Background(), asyncp.WithPayload("rss", "https://www.uber.com/blog/rss/"))
+	_ = mempr.Publisher().Publish(context.Background(), asyncp.WithPayload("rss", "https://www.uber.com/blog/rss/"))
 
-	proxy.Subscribe(context.Background(), mx)
-	proxy.Listen(context.Background())
+	_ = proxy.Subscribe(context.Background(), mx)
+	_ = proxy.Listen(context.Background())
 }

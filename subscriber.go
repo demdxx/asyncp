@@ -2,7 +2,6 @@ package asyncp
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"sync"
 
@@ -28,13 +27,13 @@ func NewProxySubscriber(subs ...Subscriber) Subscriber {
 }
 
 // Subscribe new handler for the stream
-func (prx *ProxySubscriber) Subscribe(ctx context.Context, h Receiver) (err error) {
+func (prx *ProxySubscriber) Subscribe(ctx context.Context, h Receiver) error {
 	for _, sub := range prx.subs {
-		if err = sub.Subscribe(ctx, h); err != nil {
-			break
+		if err := sub.Subscribe(ctx, h); err != nil {
+			return err
 		}
 	}
-	return err
+	return nil
 }
 
 // Listen starts processing queue
@@ -56,7 +55,6 @@ func (prx *ProxySubscriber) Listen(ctx context.Context) (err error) {
 // Close all proxy subscribers
 func (prx *ProxySubscriber) Close() error {
 	for _, sub := range prx.subs {
-		fmt.Println("CLOSE", sub)
 		_ = sub.Close()
 	}
 	return nil
