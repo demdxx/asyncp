@@ -90,7 +90,7 @@ func (p *Pipeline) Execute(ctx context.Context, event asyncp.Event, responseWrit
 		}
 		ev := streamReader.nextEvent()
 		for ; ev != nil; ev = streamReader.nextEvent() {
-			if err := task.task.Execute(ctx, ev.ForTask(task.task), rwriter); err != nil {
+			if err := task.task.Execute(ctx, ev, rwriter); err != nil {
 				if err = responseWriter.WriteResonse(ev.WithError(err)); err != nil {
 					return err
 				}

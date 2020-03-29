@@ -3,19 +3,12 @@ package asyncp
 import (
 	"bytes"
 	"encoding/json"
-	"reflect"
 )
 
 // Event provides interface of working with message streams
 type Event interface {
 	// Name of the event
 	Name() string
-
-	// TaskID returns the ID of task for which it was generated
-	TaskID() string
-
-	// ForTask creates new event object to processing the task
-	ForTask(task Task) Event
 
 	// Payload returns the current message payload
 	Payload() Payload
@@ -42,16 +35,10 @@ type Event interface {
 	Decode(data []byte) error
 }
 
-type idI interface {
-	TaskSubID() string
-}
-
 // event structure with basic implementation of event interface
 type event struct {
 	notComplete bool
 	name        string
-	taskID      string
-	taskIDs     []string
 	payload     Payload
 	err         error
 }
@@ -82,8 +69,6 @@ func (ev *event) Copy() *event {
 	return &event{
 		notComplete: ev.notComplete,
 		name:        ev.name,
-		taskID:      ev.taskID,
-		taskIDs:     ev.taskIDs,
 		payload:     ev.payload,
 		err:         ev.err,
 	}
@@ -92,21 +77,6 @@ func (ev *event) Copy() *event {
 // Name of the event
 func (ev *event) Name() string {
 	return ev.name
-}
-
-// TaskID returns the ID of the task which was used to generate the event
-func (ev *event) TaskID() string {
-	return ev.taskID
-}
-
-// ForTask creates new event object with the mark that the task has been processed
-func (ev *event) ForTask(task Task) Event {
-	return &event{
-		name:    ev.name,
-		taskID:  subidByTask(ev.TaskID(), task),
-		taskIDs: append(ev.taskIDs, ev.TaskID()),
-		payload: ev.payload,
-	}
 }
 
 // Payload returns the current message payload
@@ -123,8 +93,6 @@ func (ev *event) Err() error {
 func (ev *event) WithName(name string) Event {
 	newEvent := ev.Copy()
 	newEvent.name = name
-	newEvent.taskID = ""
-	newEvent.taskIDs = nil
 	return newEvent
 }
 
@@ -160,11 +128,9 @@ func (ev *event) IsComplete() bool {
 }
 
 type encodeEvent struct {
-	Name    string   `json:"name"`
-	TaskID  string   `json:"task_id,omitempty"`
-	TaskIDs []string `json:"task_ids,omitempty"`
-	Payload []byte   `json:"payload,omitempty"`
-	Err     string   `json:"error,omitempty"`
+	Name    string `json:"name"`
+	Payload []byte `json:"payload,omitempty"`
+	Err     string `json:"error,omitempty"`
 }
 
 // Encode event to byte array
@@ -181,8 +147,6 @@ func (ev *event) Encode() ([]byte, error) {
 	}
 	err = json.NewEncoder(&buff).Encode(&encodeEvent{
 		Name:    ev.name,
-		TaskID:  ev.taskID,
-		TaskIDs: ev.taskIDs,
 		Payload: data,
 		Err:     errorString(err),
 	})
@@ -202,8 +166,6 @@ func (ev *event) Decode(data []byte) error {
 		return nil
 	}
 	ev.name = item.Name
-	ev.taskID = item.TaskID
-	ev.taskIDs = item.TaskIDs
 	ev.payload, err = newPayload(item.Payload)
 	ev.err = stringError(item.Err)
 	if err != nil {
@@ -220,17 +182,4 @@ func (ev *event) UnmarshalJSON(data []byte) error {
 // MarshalJSON implements and wraps json.Marshaler interface
 func (ev *event) MarshalJSON() ([]byte, error) {
 	return ev.Encode()
-}
-
-func subidByTask(parentID string, task Task) string {
-	if task == nil {
-		return parentID
-	}
-	if parentID != `` {
-		parentID = parentID + `.`
-	}
-	if id, _ := task.(idI); id != nil {
-		return parentID + id.TaskSubID()
-	}
-	return parentID + reflect.TypeOf(task).String()
 }
