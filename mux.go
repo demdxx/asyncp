@@ -106,6 +106,18 @@ func (srv *TaskMux) Receive(msg Message) error {
 	return msg.Ack()
 }
 
+// Close task schedule and all subtasks
+func (srv *TaskMux) Close() error {
+	var err multiError
+	if srv == nil || srv.tasks == nil {
+		return nil
+	}
+	for _, promise := range srv.tasks {
+		err.Add(promise.Close())
+	}
+	return err.AsError()
+}
+
 func (srv *TaskMux) borrowResponseWriter(prom *promise, event Event) ResponseWriter {
 	if srv.responseFactory == nil {
 		return &responseProxyWriter{mux: srv, parent: event, promise: prom}

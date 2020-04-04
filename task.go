@@ -17,3 +17,8 @@ type FuncTask func(ctx context.Context, event Event, responseWriter ResponseWrit
 func (f FuncTask) Execute(ctx context.Context, event Event, responseWriter ResponseWriter) error {
 	return f(ctx, event, responseWriter)
 }
+
+// Async transforms task to the asynchronous executor
+func (f FuncTask) Async(options ...AsyncOption) *AsyncTask {
+	return WrapAsyncTask(f, options...)
+}

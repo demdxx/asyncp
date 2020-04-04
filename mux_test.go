@@ -26,4 +26,5 @@ func TestMuxErrorPanic(t *testing.T) {
 	assert.True(t, isError, `error`)
 	assert.True(t, isPanic, `panic`)
 	assert.True(t, isFailover, `failover`)
+	assert.NoError(t, mux.Close())
 }

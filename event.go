@@ -3,15 +3,21 @@ package asyncp
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 )
 
 // Event provides interface of working with message streams
 type Event interface {
+	fmt.Stringer
+
 	// Name of the event
 	Name() string
 
 	// Payload returns the current message payload
 	Payload() Payload
+
+	// Err returns error response object
+	Err() error
 
 	// WithName returns new event with new name and current payload and error
 	WithName(name string) Event

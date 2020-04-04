@@ -1,6 +1,9 @@
 package asyncp
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+)
 
 // Promise describe the behaviour of Single task item
 type Promise interface {
@@ -74,6 +77,13 @@ func (prom *promise) Parent() Promise {
 
 func (prom *promise) Task() Task {
 	return prom.task
+}
+
+func (prom *promise) Close() error {
+	if closer, _ := prom.task.(io.Closer); closer != nil {
+		return closer.Close()
+	}
+	return nil
 }
 
 func (prom *promise) originalEventName() (_ string, depth int) {

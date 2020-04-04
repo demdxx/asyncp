@@ -37,6 +37,7 @@ func main() {
     asyncp.WithPanicHandler(...),
     asyncp.WithErrorHandler(...),
   )
+  defer func() { _ = mx.Close() }()
 
   // Create new task handler to download articles by RSS
   mx.Handle("rss", asyncp.FuncTask(downloadRSSList)).
@@ -65,4 +66,19 @@ func main() {
   taskQueueSub.Subscribe(context.Background(), mx)
   taskQueueSub.Listen(context.Background())
 }
+```
+
+Convert task to async executor.
+
+```go
+atask := asyncp.WrapAsyncTask(task,
+  WithWorkerCount(10),
+  WithWorkerPoolSize(20),
+  WithRecoverHandler(func(rec interface{}) {
+    // ...
+  }))
+
+// Or
+
+asyncp.FuncTask(assembleBasicInfo).Async()
 ```
