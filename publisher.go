@@ -10,9 +10,16 @@ import (
 type Publisher = notificationcenter.Publisher
 
 // Retranslator of the event to the stream
-func Retranslator(pub Publisher) Task {
+func Retranslator(pubs ...Publisher) Task {
 	return FuncTask(func(ctx context.Context, event Event, responseWriter ResponseWriter) error {
-		return pub.Publish(ctx, event)
+		if len(pubs) > 0 {
+			for _, pub := range pubs {
+				if err := pub.Publish(ctx, event); err != nil {
+					return err
+				}
+			}
+		}
+		return responseWriter.WriteResonse(event)
 	})
 }
 

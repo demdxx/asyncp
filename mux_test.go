@@ -15,6 +15,7 @@ func TestMuxErrorPanic(t *testing.T) {
 	mux := NewTaskMux(
 		WithPanicHandler(func(Task, Event, interface{}) { isPanic = true }),
 		WithErrorHandler(func(Task, Event, error) { isError = true }),
+		WithStreamResponseMap(&testPublisher{name: "test"}),
 	)
 	_ = mux.Handle(`error`, FuncTask(func(context.Context, Event, ResponseWriter) error { return fmt.Errorf(`test`) }))
 	_ = mux.Handle(`panic`, FuncTask(func(context.Context, Event, ResponseWriter) error { panic("test") }))

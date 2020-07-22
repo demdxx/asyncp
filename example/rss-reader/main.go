@@ -114,7 +114,7 @@ func main() {
 	mempr := gochan.New(100)
 	proxy := asyncp.NewProxySubscriber(mempr)
 
-	mx := asyncp.NewTaskMux(asyncp.WithStreamResponseFactory(mempr.Publisher()))
+	mx := asyncp.NewTaskMux(asyncp.WithStreamResponsePublisher(mempr.Publisher()))
 	mx.Handle("rss", asyncp.FuncTask(downloadRSSList)).
 		Then(asyncp.FuncTask(downloadRSSItem)).
 		Then(asyncp.FuncTask(printResults)).
