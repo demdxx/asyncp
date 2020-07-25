@@ -90,7 +90,6 @@ func (srv *TaskMux) Receive(msg Message) error {
 	}
 
 	wrt := srv.borrowResponseWriter(task, event)
-	defer srv.releaseResponseWriter(wrt)
 
 	// Execute the task
 	ctx := context.Background()
@@ -123,13 +122,6 @@ func (srv *TaskMux) borrowResponseWriter(prom *promise, event Event) ResponseWri
 		return &responseProxyWriter{mux: srv, parent: event, promise: prom}
 	}
 	return srv.responseFactory.Borrow(prom, event)
-}
-
-func (srv *TaskMux) releaseResponseWriter(rw ResponseWriter) {
-	if srv.responseFactory == nil {
-		return
-	}
-	srv.responseFactory.Release(rw)
 }
 
 func (srv *TaskMux) eventDecode(data []byte) (*event, error) {

@@ -2,6 +2,7 @@ package asyncp
 
 import (
 	"context"
+	"log"
 
 	"github.com/demdxx/rpool"
 )
@@ -72,6 +73,12 @@ func (t *AsyncTask) Execute(ctx context.Context, event Event, responseWriter Res
 
 func (t *AsyncTask) handler(ctx interface{}) {
 	p := ctx.(*asyncTaskParams)
+	defer func() {
+		err := p.rw.Release()
+		if err != nil {
+			log.Printf("release response writer: %s", err.Error())
+		}
+	}()
 	err := t.task.Execute(p.ctx, p.event, p.rw)
 	if err != nil {
 		panic(err)

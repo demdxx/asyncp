@@ -35,6 +35,7 @@ func (s *streamResponseFactory) Borrow(promise Promise, event Event) ResponseWri
 	wr.event = event
 	wr.promise = promise
 	wr.wstream = s.publisher
+	wr.pool = s
 	return wr
 }
 
@@ -42,10 +43,12 @@ func (s *streamResponseFactory) Release(w ResponseWriter) {
 	if w == nil {
 		return
 	}
-	wr := w.(*responseStreamWriter)
-	wr.event = nil
-	wr.wstream = nil
-	s.pool.Put(wr)
+	if wr := w.(*responseStreamWriter); wr.event != nil {
+		wr.event = nil
+		wr.wstream = nil
+		wr.pool = nil
+		s.pool.Put(wr)
+	}
 }
 
 type multistreamItem struct {
@@ -114,6 +117,7 @@ func (s *mutistreamResponseFactory) Borrow(promise Promise, event Event) Respons
 	wr.event = event
 	wr.promise = promise
 	wr.wstream = s.publisher(event)
+	wr.pool = s
 	return wr
 }
 
@@ -121,10 +125,12 @@ func (s *mutistreamResponseFactory) Release(w ResponseWriter) {
 	if w == nil {
 		return
 	}
-	wr := w.(*responseStreamWriter)
-	wr.event = nil
-	wr.wstream = nil
-	s.pool.Put(wr)
+	if wr := w.(*responseStreamWriter); wr.event != nil {
+		wr.event = nil
+		wr.wstream = nil
+		wr.pool = nil
+		s.pool.Put(wr)
+	}
 }
 
 func (s *mutistreamResponseFactory) publisher(event Event) Publisher {

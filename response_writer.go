@@ -2,10 +2,18 @@ package asyncp
 
 import "context"
 
+type responseWriterRelseasePool interface {
+	// Release response writer object
+	Release(w ResponseWriter)
+}
+
 // ResponseWriter basic response functionality
 type ResponseWriter interface {
 	// WriteResonse sends data into the stream response
 	WriteResonse(response interface{}) error
+
+	// Release response writer stream
+	Release() error
 }
 
 // ResponseHandlerFnk provides implementation of ResponseWriter interface
@@ -16,10 +24,16 @@ func (f ResponseHandlerFnk) WriteResonse(response interface{}) error {
 	return f(response)
 }
 
+// Release response writer stream empty method
+func (f ResponseHandlerFnk) Release() error {
+	return nil
+}
+
 type responseProxyWriter struct {
 	parent  Event
 	promise Promise
 	mux     *TaskMux
+	pool    responseWriterRelseasePool
 }
 
 func (wr *responseProxyWriter) WriteResonse(value interface{}) error {
@@ -40,10 +54,18 @@ func (wr *responseProxyWriter) WriteResonse(value interface{}) error {
 	return wr.mux.Receive(msg)
 }
 
+func (wr *responseProxyWriter) Release() error {
+	if wr.pool != nil {
+		wr.pool.Release(wr)
+	}
+	return nil
+}
+
 type responseStreamWriter struct {
 	event   Event
 	promise Promise
 	wstream Publisher
+	pool    responseWriterRelseasePool
 }
 
 func (wr *responseStreamWriter) WriteResonse(value interface{}) error {
@@ -58,4 +80,11 @@ func (wr *responseStreamWriter) WriteResonse(value interface{}) error {
 		ev = ev.WithName(wr.promise.TargetEventName())
 	}
 	return wr.wstream.Publish(context.Background(), ev)
+}
+
+func (wr *responseStreamWriter) Release() error {
+	if wr.pool != nil {
+		wr.pool.Release(wr)
+	}
+	return nil
 }

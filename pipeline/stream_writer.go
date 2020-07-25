@@ -61,3 +61,7 @@ func (stream *stream) Close() error {
 	eventPool.Put(stream.pool)
 	return nil
 }
+
+func (stream *stream) Release() error {
+	return nil
+}

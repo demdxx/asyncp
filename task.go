@@ -1,6 +1,9 @@
 package asyncp
 
-import "context"
+import (
+	"context"
+	"log"
+)
 
 // Task describes a single execution unit
 //go:generate mockgen -source $GOFILE -package mocks -destination mocks/task.go
@@ -15,6 +18,12 @@ type FuncTask func(ctx context.Context, event Event, responseWriter ResponseWrit
 
 // Execute the list of subtasks with input data collection.
 func (f FuncTask) Execute(ctx context.Context, event Event, responseWriter ResponseWriter) error {
+	defer func() {
+		err := responseWriter.Release()
+		if err != nil {
+			log.Printf("release response writer: %s", err.Error())
+		}
+	}()
 	return f(ctx, event, responseWriter)
 }
 
