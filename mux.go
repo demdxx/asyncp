@@ -45,13 +45,17 @@ func NewTaskMux(options ...Option) *TaskMux {
 	for _, opt := range options {
 		opt(&opts)
 	}
-	return &TaskMux{
+	mux := &TaskMux{
 		tasks:           map[string]*promise{},
 		panicHandler:    opts.PanicHandler,
 		errorHandler:    opts.ErrorHandler,
 		contextWrapper:  opts.ContextWrapper,
-		responseFactory: opts.StreamResponseFactory,
+		responseFactory: opts.ResponseFactory,
 	}
+	if muxSet, ok := mux.responseFactory.(interface{ SetMux(mux *TaskMux) }); ok {
+		muxSet.SetMux(mux)
+	}
+	return mux
 }
 
 // Handle register new task for specific chanel
@@ -79,6 +83,14 @@ func (srv *TaskMux) Receive(msg Message) error {
 	if err != nil {
 		return err
 	}
+	if err = srv.ExecuteEvent(event); err != nil {
+		return err
+	}
+	return msg.Ack()
+}
+
+// ExecuteEvent with mux executor
+func (srv *TaskMux) ExecuteEvent(event Event) error {
 	task, ok := srv.tasks[event.Name()]
 	if !ok {
 		task = srv.failoverTask
@@ -100,7 +112,7 @@ func (srv *TaskMux) Receive(msg Message) error {
 	wrt := srv.borrowResponseWriter(ctx, task, event)
 
 	// Execute the task
-	err = task.task.Execute(ctx, event, wrt)
+	err := task.task.Execute(ctx, event, wrt)
 
 	if err != nil {
 		if srv.errorHandler != nil {
@@ -109,7 +121,7 @@ func (srv *TaskMux) Receive(msg Message) error {
 			return err
 		}
 	}
-	return msg.Ack()
+	return nil
 }
 
 // Close task schedule and all subtasks
@@ -126,7 +138,7 @@ func (srv *TaskMux) Close() error {
 
 func (srv *TaskMux) borrowResponseWriter(ctx context.Context, prom *promise, event Event) ResponseWriter {
 	if srv.responseFactory == nil {
-		return &responseProxyWriter{mux: srv, parent: event, promise: prom}
+		return &responseProxyWriter{mux: srv, event: event, promise: prom}
 	}
 	return srv.responseFactory.Borrow(ctx, prom, event)
 }

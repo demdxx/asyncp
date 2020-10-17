@@ -13,11 +13,11 @@ type (
 
 // Options of the mux server
 type Options struct {
-	MainExecContext       context.Context
-	PanicHandler          PanicHandlerFnk
-	ErrorHandler          ErrorHandlerFnk
-	ContextWrapper        ContextWrapperFnk
-	StreamResponseFactory ResponseWriterFactory
+	MainExecContext context.Context
+	PanicHandler    PanicHandlerFnk
+	ErrorHandler    ErrorHandlerFnk
+	ContextWrapper  ContextWrapperFnk
+	ResponseFactory ResponseWriterFactory
 }
 
 // Option of the task configuration
@@ -54,20 +54,20 @@ func WithContextWrapper(w ContextWrapperFnk) Option {
 // WithStreamResponseMap set option with stream mapping converted to factory
 func WithStreamResponseMap(streams ...interface{}) Option {
 	return func(opt *Options) {
-		opt.StreamResponseFactory = NewMultistreamResponseFactory(streams...)
+		opt.ResponseFactory = NewMultistreamResponseFactory(streams...)
 	}
 }
 
-// WithStreamResponseFactory set option with stream factory
-func WithStreamResponseFactory(responseFactory ResponseWriterFactory) Option {
+// WithResponseFactory set option with stream factory
+func WithResponseFactory(responseFactory ResponseWriterFactory) Option {
 	return func(opt *Options) {
-		opt.StreamResponseFactory = responseFactory
+		opt.ResponseFactory = responseFactory
 	}
 }
 
 // WithStreamResponsePublisher set option with single stream publisher
 func WithStreamResponsePublisher(publisher Publisher) Option {
 	return func(opt *Options) {
-		opt.StreamResponseFactory = NewStreamResponseFactory(publisher)
+		opt.ResponseFactory = NewStreamResponseFactory(publisher)
 	}
 }

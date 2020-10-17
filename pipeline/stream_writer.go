@@ -4,7 +4,11 @@ import (
 	"sync"
 
 	"github.com/demdxx/asyncp"
+	"github.com/pkg/errors"
 )
+
+// ErrResponseRepeatUnsupported in case of pipeline
+var ErrResponseRepeatUnsupported = errors.New("response repeat unsupported in pipeline")
 
 var eventPool = &sync.Pool{
 	New: func() interface{} {
@@ -40,6 +44,11 @@ func (stream *stream) WriteResonse(response interface{}) error {
 		stream.pool = append(stream.pool, stream.parentEvent.WithPayload(response))
 	}
 	return nil
+}
+
+// RepeatWithResponse send data into the same stream response
+func (stream *stream) RepeatWithResponse(response interface{}) error {
+	return ErrResponseRepeatUnsupported
 }
 
 func (stream *stream) nextEvent() asyncp.Event {

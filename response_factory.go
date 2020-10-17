@@ -54,6 +54,45 @@ func (s *streamResponseFactory) Release(w ResponseWriter) {
 	}
 }
 
+type proxyResponseFactory struct {
+	mux  *TaskMux
+	pool sync.Pool
+}
+
+// NewProxyResponseFactory returns
+func NewProxyResponseFactory() ResponseWriterFactory {
+	return &proxyResponseFactory{
+		pool: sync.Pool{
+			New: func() interface{} { return &responseProxyWriter{} },
+		},
+	}
+}
+
+func (s *proxyResponseFactory) SetMux(mux *TaskMux) {
+	s.mux = mux
+}
+
+func (s *proxyResponseFactory) Borrow(ctx context.Context, promise Promise, event Event) ResponseWriter {
+	wr := s.pool.Get().(*responseProxyWriter)
+	wr.event = event
+	wr.promise = promise
+	wr.pool = s
+	wr.mux = s.mux
+	return wr
+}
+
+func (s *proxyResponseFactory) Release(w ResponseWriter) {
+	if w == nil {
+		return
+	}
+	if wr := w.(*responseProxyWriter); wr.event != nil {
+		wr.promise = nil
+		wr.event = nil
+		wr.pool = nil
+		s.pool.Put(wr)
+	}
+}
+
 type multistreamItem struct {
 	patterns  []*regexp.Regexp
 	publisher Publisher

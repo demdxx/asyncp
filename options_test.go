@@ -16,7 +16,7 @@ func TestOptions(t *testing.T) {
 			WithErrorHandler(func(Task, Event, error) {}),
 			WithContextWrapper(func(ctx context.Context) context.Context { return ctx }),
 			WithStreamResponseMap("item1", &testPublisher{name: "test-"}),
-			WithStreamResponseFactory(NewMultistreamResponseFactory("item2", &testPublisher{name: "test2"})),
+			WithResponseFactory(NewMultistreamResponseFactory("item2", &testPublisher{name: "test2"})),
 			WithStreamResponsePublisher(&testPublisher{name: "test3"}),
 		}
 	)
@@ -27,5 +27,5 @@ func TestOptions(t *testing.T) {
 	assert.NotNil(t, options.PanicHandler)
 	assert.NotNil(t, options.ErrorHandler)
 	assert.NotNil(t, options.ContextWrapper)
-	assert.NotNil(t, options.StreamResponseFactory)
+	assert.NotNil(t, options.ResponseFactory)
 }

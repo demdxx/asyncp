@@ -12,6 +12,9 @@ type ResponseWriter interface {
 	// WriteResonse sends data into the stream response
 	WriteResonse(response interface{}) error
 
+	// RepeatWithResponse send data into the same stream response
+	RepeatWithResponse(response interface{}) error
+
 	// Release response writer stream
 	Release() error
 }
@@ -24,34 +27,43 @@ func (f ResponseHandlerFnk) WriteResonse(response interface{}) error {
 	return f(response)
 }
 
+// RepeatWithResponse send data into the same stream response
+func (f ResponseHandlerFnk) RepeatWithResponse(response interface{}) error {
+	return f(response)
+}
+
 // Release response writer stream empty method
 func (f ResponseHandlerFnk) Release() error {
 	return nil
 }
 
 type responseProxyWriter struct {
-	parent  Event
+	event   Event
 	promise Promise
 	mux     *TaskMux
 	pool    responseWriterRelseasePool
 }
 
 func (wr *responseProxyWriter) WriteResonse(value interface{}) error {
+	return wr.writeResonseWithEventName(wr.promise.TargetEventName(), value)
+}
+
+func (wr *responseProxyWriter) RepeatWithResponse(value interface{}) error {
+	return wr.writeResonseWithEventName(wr.promise.EventName(), value)
+}
+
+func (wr *responseProxyWriter) writeResonseWithEventName(name string, value interface{}) error {
 	var ev Event
 	switch v := value.(type) {
 	case Event:
 		ev = v
 	default:
-		ev = wr.parent.WithPayload(value)
+		ev = wr.event.WithPayload(value)
 	}
 	if ev.IsComplete() {
-		ev = ev.WithName(wr.promise.TargetEventName())
+		ev = ev.WithName(name)
 	}
-	msg, err := messageFrom(ev)
-	if err != nil {
-		return err
-	}
-	return wr.mux.Receive(msg)
+	return wr.mux.ExecuteEvent(ev)
 }
 
 func (wr *responseProxyWriter) Release() error {
@@ -70,6 +82,14 @@ type responseStreamWriter struct {
 }
 
 func (wr *responseStreamWriter) WriteResonse(value interface{}) error {
+	return wr.writeResonseWithEventName(wr.promise.TargetEventName(), value)
+}
+
+func (wr *responseStreamWriter) RepeatWithResponse(value interface{}) error {
+	return wr.writeResonseWithEventName(wr.promise.EventName(), value)
+}
+
+func (wr *responseStreamWriter) writeResonseWithEventName(name string, value interface{}) error {
 	var ev Event
 	switch v := value.(type) {
 	case Event:
@@ -78,7 +98,7 @@ func (wr *responseStreamWriter) WriteResonse(value interface{}) error {
 		ev = wr.event.WithPayload(value)
 	}
 	if ev.IsComplete() {
-		ev = ev.WithName(wr.promise.TargetEventName())
+		ev = ev.WithName(name)
 	}
 	return wr.wstream.Publish(wr.getExecContext(), ev)
 }
