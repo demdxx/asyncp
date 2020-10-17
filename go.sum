@@ -25,8 +25,8 @@ github.com/elliotchance/redismock v1.5.3/go.mod h1:8FFsGWghPUyP7nqj/UYXr2xqd6U2i
 github.com/fortytw2/leaktest v1.3.0/go.mod h1:jDsjWgpAGjm2CA7WthBh/CdZYEPF31XHquHwclZch5g=
 github.com/frankban/quicktest v1.7.2/go.mod h1:jaStnuzAqU1AJdCO0l53JDCJrVDKcS03DbaAcR7Ks/o=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
-github.com/geniusrabbit/notificationcenter v1.3.1 h1:vKo0lDAbmiXBF8ThiQel+Az5n4p5N82QVGToFhukMrw=
-github.com/geniusrabbit/notificationcenter v1.3.1/go.mod h1:N4jxUTyXCXZgKdv4vw/SM0Po6FYh/kBLOH+vTZUV6zM=
+github.com/geniusrabbit/notificationcenter v1.3.2-0.20200514184124-6d0c2557e62f h1:6SUfXyDDoFHTI1banoz59FaK4m7+VQiQ0aX5a7TeJAE=
+github.com/geniusrabbit/notificationcenter v1.3.2-0.20200514184124-6d0c2557e62f/go.mod h1:N4jxUTyXCXZgKdv4vw/SM0Po6FYh/kBLOH+vTZUV6zM=
 github.com/go-redis/redis v6.15.7+incompatible/go.mod h1:NAIEuMOZ/fxfXJIrKDQDz8wamY7mA7PouImQ2Jvg6kA=
 github.com/go-sql-driver/mysql v1.5.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LBy8hT2VhHyBg=
 github.com/gogo/protobuf v1.2.1/go.mod h1:hp+jE20tsWTFYpLwKvXlhS1hjn+gTNwPg2I6zVXpSg4=

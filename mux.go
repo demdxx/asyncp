@@ -23,11 +23,17 @@ type TaskMux struct {
 	// Default task if not found
 	failoverTask *promise
 
+	// mainExecContext as default for any execution request
+	mainExecContext context.Context
+
 	// errorHandler process panic responses
-	panicHandler func(Task, Event, interface{})
+	panicHandler PanicHandlerFnk
 
 	// errorHandler process error responses
-	errorHandler func(Task, Event, error)
+	errorHandler ErrorHandlerFnk
+
+	// contextWrapper for execution context preparation
+	contextWrapper ContextWrapperFnk
 
 	// Allocate new specific writer for every event separately
 	responseFactory ResponseWriterFactory
@@ -43,6 +49,7 @@ func NewTaskMux(options ...Option) *TaskMux {
 		tasks:           map[string]*promise{},
 		panicHandler:    opts.PanicHandler,
 		errorHandler:    opts.ErrorHandler,
+		contextWrapper:  opts.ContextWrapper,
 		responseFactory: opts.StreamResponseFactory,
 	}
 }
@@ -89,10 +96,10 @@ func (srv *TaskMux) Receive(msg Message) error {
 		}()
 	}
 
-	wrt := srv.borrowResponseWriter(task, event)
+	ctx := srv.newExecContext()
+	wrt := srv.borrowResponseWriter(ctx, task, event)
 
 	// Execute the task
-	ctx := context.Background()
 	err = task.task.Execute(ctx, event, wrt)
 
 	if err != nil {
@@ -117,14 +124,25 @@ func (srv *TaskMux) Close() error {
 	return err.AsError()
 }
 
-func (srv *TaskMux) borrowResponseWriter(prom *promise, event Event) ResponseWriter {
+func (srv *TaskMux) borrowResponseWriter(ctx context.Context, prom *promise, event Event) ResponseWriter {
 	if srv.responseFactory == nil {
 		return &responseProxyWriter{mux: srv, parent: event, promise: prom}
 	}
-	return srv.responseFactory.Borrow(prom, event)
+	return srv.responseFactory.Borrow(ctx, prom, event)
 }
 
 func (srv *TaskMux) eventDecode(data []byte) (*event, error) {
 	event := &event{}
 	return event, event.Decode(data)
+}
+
+func (srv *TaskMux) newExecContext() context.Context {
+	ctx := srv.mainExecContext
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if srv.contextWrapper != nil {
+		ctx = srv.contextWrapper(ctx)
+	}
+	return ctx
 }

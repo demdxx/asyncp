@@ -1,6 +1,7 @@
 package asyncp
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"sync"
@@ -9,7 +10,7 @@ import (
 // ResponseWriterFactory interface to generate new response object
 type ResponseWriterFactory interface {
 	// Borrow response writer by event and task object
-	Borrow(promise Promise, event Event) ResponseWriter
+	Borrow(ctx context.Context, promise Promise, event Event) ResponseWriter
 
 	// Release response writer object
 	Release(w ResponseWriter)
@@ -30,8 +31,9 @@ func NewStreamResponseFactory(publisher Publisher) ResponseWriterFactory {
 	}
 }
 
-func (s *streamResponseFactory) Borrow(promise Promise, event Event) ResponseWriter {
+func (s *streamResponseFactory) Borrow(ctx context.Context, promise Promise, event Event) ResponseWriter {
 	wr := s.pool.Get().(*responseStreamWriter)
+	wr.ctx = ctx
 	wr.event = event
 	wr.promise = promise
 	wr.wstream = s.publisher
@@ -44,6 +46,7 @@ func (s *streamResponseFactory) Release(w ResponseWriter) {
 		return
 	}
 	if wr := w.(*responseStreamWriter); wr.event != nil {
+		wr.ctx = nil
 		wr.event = nil
 		wr.wstream = nil
 		wr.pool = nil
@@ -112,7 +115,7 @@ func NewMultistreamResponseFactory(streams ...interface{}) ResponseWriterFactory
 	}
 }
 
-func (s *mutistreamResponseFactory) Borrow(promise Promise, event Event) ResponseWriter {
+func (s *mutistreamResponseFactory) Borrow(ctx context.Context, promise Promise, event Event) ResponseWriter {
 	wr := s.pool.Get().(*responseStreamWriter)
 	wr.event = event
 	wr.promise = promise

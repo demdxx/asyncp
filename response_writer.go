@@ -62,6 +62,7 @@ func (wr *responseProxyWriter) Release() error {
 }
 
 type responseStreamWriter struct {
+	ctx     context.Context
 	event   Event
 	promise Promise
 	wstream Publisher
@@ -79,7 +80,7 @@ func (wr *responseStreamWriter) WriteResonse(value interface{}) error {
 	if ev.IsComplete() {
 		ev = ev.WithName(wr.promise.TargetEventName())
 	}
-	return wr.wstream.Publish(context.Background(), ev)
+	return wr.wstream.Publish(wr.getExecContext(), ev)
 }
 
 func (wr *responseStreamWriter) Release() error {
@@ -87,4 +88,11 @@ func (wr *responseStreamWriter) Release() error {
 		wr.pool.Release(wr)
 	}
 	return nil
+}
+
+func (wr *responseStreamWriter) getExecContext() context.Context {
+	if wr.ctx != nil {
+		return wr.ctx
+	}
+	return context.Background()
 }
