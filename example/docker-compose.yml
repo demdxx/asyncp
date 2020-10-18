@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  redis:
+    restart: always
+    image: redis:latest
+
+  counter:
+    image: golang:latest
+    command: /project/.build/counter --storage=redis://redis:6379/0 --app=test
+    working_dir: /project
+    depends_on: [redis]
+    volumes: [../:/project/]
+
+  apmonitor:
+    image: golang:latest
+    command: /project/.build/apmonitor --storage=redis://redis:6379/0 --app=test
+    working_dir: /project
+    depends_on: [redis,counter]
+    volumes: [../:/project/]

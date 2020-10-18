@@ -1,6 +1,12 @@
 package asyncp
 
-import "context"
+import (
+	"context"
+	"net"
+	"os"
+
+	"github.com/demdxx/asyncp/monitor"
+)
 
 type (
 	// ContextWrapperFnk for prepare execution context
@@ -18,6 +24,7 @@ type Options struct {
 	ErrorHandler    ErrorHandlerFnk
 	ContextWrapper  ContextWrapperFnk
 	ResponseFactory ResponseWriterFactory
+	Monitor         *Monotor
 }
 
 // Option of the task configuration
@@ -70,4 +77,33 @@ func WithStreamResponsePublisher(publisher Publisher) Option {
 	return func(opt *Options) {
 		opt.ResponseFactory = NewStreamResponseFactory(publisher)
 	}
+}
+
+// WithMonitor set option with monitoring storage
+func WithMonitor(appName, host, hostname string, storage ...monitor.Storage) Option {
+	return func(opt *Options) {
+		opt.Monitor = NewMonitor(appName, host, hostname, storage...)
+	}
+}
+
+// WithMonitorDefaults set option with monitoring storage
+func WithMonitorDefaults(appName string, storage ...monitor.Storage) Option {
+	hostname, _ := os.Hostname()
+	return WithMonitor(appName, localIP(), hostname, storage...)
+}
+
+func localIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+	for _, address := range addrs {
+		// check the address type and if it is not a loopback the display it
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
+	return ""
 }
