@@ -2,6 +2,8 @@ package asyncp
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/geniusrabbit/notificationcenter"
 	"github.com/pkg/errors"
@@ -17,6 +19,9 @@ type Stream = notificationcenter.Publisher
 
 // TaskMux object which controls the workflow of task execution
 type TaskMux struct {
+	// monitor accessor
+	monitor *Monotor
+
 	// Chanel name + task with responser
 	tasks map[string]*promise
 
@@ -51,6 +56,7 @@ func NewTaskMux(options ...Option) *TaskMux {
 		errorHandler:    opts.ErrorHandler,
 		contextWrapper:  opts.ContextWrapper,
 		responseFactory: opts.ResponseFactory,
+		monitor:         opts.Monitor,
 	}
 	if muxSet, ok := mux.responseFactory.(interface{ SetMux(mux *TaskMux) }); ok {
 		muxSet.SetMux(mux)
@@ -80,6 +86,7 @@ func (srv *TaskMux) Failver(task Task) error {
 // Receive definds the processing function
 func (srv *TaskMux) Receive(msg Message) error {
 	event, err := srv.eventDecode(msg.Body())
+	srv.monitor.receiveEvent(event, err)
 	if err != nil {
 		return err
 	}
@@ -92,18 +99,28 @@ func (srv *TaskMux) Receive(msg Message) error {
 // ExecuteEvent with mux executor
 func (srv *TaskMux) ExecuteEvent(event Event) error {
 	task, ok := srv.tasks[event.Name()]
+	isFailover := false
 	if !ok {
+		isFailover = true
 		task = srv.failoverTask
 	}
 	if task == nil {
 		return nil
 	}
 
+	startTime := time.Now()
+
 	// process task panics
 	if srv.panicHandler != nil {
 		defer func() {
 			if err := recover(); err != nil {
 				srv.panicHandler(task.Task(), event, err)
+				switch err.(type) {
+				case error:
+				default:
+					err = fmt.Errorf("%v", err)
+				}
+				srv.monitor.execEvent(isFailover, event, time.Since(startTime), err.(error))
 			}
 		}()
 	}
@@ -113,6 +130,7 @@ func (srv *TaskMux) ExecuteEvent(event Event) error {
 
 	// Execute the task
 	err := task.task.Execute(ctx, event, wrt)
+	srv.monitor.execEvent(isFailover, event, time.Since(startTime), err)
 
 	if err != nil {
 		if srv.errorHandler != nil {
@@ -124,8 +142,14 @@ func (srv *TaskMux) ExecuteEvent(event Event) error {
 	return nil
 }
 
+// FinishInit of the task server
+func (srv *TaskMux) FinishInit() error {
+	return srv.monitor.register(srv)
+}
+
 // Close task schedule and all subtasks
 func (srv *TaskMux) Close() error {
+	srv.monitor.deregister()
 	var err multiError
 	if srv == nil || srv.tasks == nil {
 		return nil
@@ -157,4 +181,16 @@ func (srv *TaskMux) newExecContext() context.Context {
 		ctx = srv.contextWrapper(ctx)
 	}
 	return ctx
+}
+
+// EventMap returns linked list of events
+func (srv *TaskMux) EventMap() map[string]string {
+	if srv.tasks == nil {
+		return map[string]string{}
+	}
+	mp := make(map[string]string, len(srv.tasks))
+	for eventName, promiseObject := range srv.tasks {
+		mp[eventName] = promiseObject.TargetEventName()
+	}
+	return mp
 }

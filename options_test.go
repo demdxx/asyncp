@@ -18,6 +18,7 @@ func TestOptions(t *testing.T) {
 			WithStreamResponseMap("item1", &testPublisher{name: "test-"}),
 			WithResponseFactory(NewMultistreamResponseFactory("item2", &testPublisher{name: "test2"})),
 			WithStreamResponsePublisher(&testPublisher{name: "test3"}),
+			WithMonitorDefaults("test"),
 		}
 	)
 	for _, opt := range optionFnk {
@@ -28,4 +29,5 @@ func TestOptions(t *testing.T) {
 	assert.NotNil(t, options.ErrorHandler)
 	assert.NotNil(t, options.ContextWrapper)
 	assert.NotNil(t, options.ResponseFactory)
+	assert.NotNil(t, options.Monitor)
 }
