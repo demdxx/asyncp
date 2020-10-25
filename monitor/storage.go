@@ -2,17 +2,27 @@ package monitor
 
 import "time"
 
-// Storage data accessor for monitoring
-type Storage interface {
-	ApplicationInfo() *ApplicationInfo
+// MetricUpdater increments data metric
+type MetricUpdater interface {
 	RegisterApplication(appInfo *ApplicationInfo) error
 	DeregisterApplication() error
-	ReceiveCount() (uint64, error)
 	IncReceiveCount() error
-	TaskInfo(name string) (*TaskInfo, error)
 	IncTaskInfo(name string, execTime time.Duration, err error) error
-	FailoverTaskInfo(name string) (*TaskInfo, error)
 	IncFailoverTaskInfo(execTime time.Duration, err error) error
+}
+
+// MetricReader of information
+type MetricReader interface {
+	ApplicationInfo() *ApplicationInfo
+	ReceiveCount() (uint64, error)
+	TaskInfo(name string) (*TaskInfo, error)
+	FailoverTaskInfo(name string) (*TaskInfo, error)
+}
+
+// Storage data accessor for monitoring
+type Storage interface {
+	MetricUpdater
+	MetricReader
 }
 
 // ClusterInfoReader provides methods of information reading

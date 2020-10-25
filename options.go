@@ -80,16 +80,16 @@ func WithStreamResponsePublisher(publisher Publisher) Option {
 }
 
 // WithMonitor set option with monitoring storage
-func WithMonitor(appName, host, hostname string, storage ...monitor.Storage) Option {
+func WithMonitor(appName, host, hostname string, updater ...monitor.MetricUpdater) Option {
 	return func(opt *Options) {
-		opt.Monitor = NewMonitor(appName, host, hostname, storage...)
+		opt.Monitor = NewMonitor(appName, host, hostname, updater...)
 	}
 }
 
 // WithMonitorDefaults set option with monitoring storage
-func WithMonitorDefaults(appName string, storage ...monitor.Storage) Option {
+func WithMonitorDefaults(appName string, updater ...monitor.MetricUpdater) Option {
 	hostname, _ := os.Hostname()
-	return WithMonitor(appName, localIP(), hostname, storage...)
+	return WithMonitor(appName, localIP(), hostname, updater...)
 }
 
 func localIP() string {
