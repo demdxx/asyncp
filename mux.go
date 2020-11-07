@@ -54,6 +54,7 @@ func NewTaskMux(options ...Option) *TaskMux {
 		tasks:           map[string]*promise{},
 		panicHandler:    opts.PanicHandler,
 		errorHandler:    opts.ErrorHandler,
+		mainExecContext: opts.MainExecContext,
 		contextWrapper:  opts.ContextWrapper,
 		responseFactory: opts.ResponseFactory,
 		monitor:         opts.Monitor,
