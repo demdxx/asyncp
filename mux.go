@@ -66,21 +66,21 @@ func NewTaskMux(options ...Option) *TaskMux {
 }
 
 // Handle register new task for specific chanel
-func (srv *TaskMux) Handle(chanelName string, task Task) Promise {
+func (srv *TaskMux) Handle(chanelName string, handler interface{}) Promise {
 	if srv.tasks == nil {
 		srv.tasks = map[string]*promise{}
 	}
 	if _, ok := srv.tasks[chanelName]; ok {
 		panic(errors.Wrap(ErrChanelTaken, chanelName))
 	}
-	taskItemValue := newPoromise(srv, nil, chanelName, task)
+	taskItemValue := newPoromise(srv, nil, chanelName, TaskFrom(handler))
 	srv.tasks[chanelName] = taskItemValue
 	return taskItemValue
 }
 
 // Failver handler if was reseaved event with unsappoted event
-func (srv *TaskMux) Failver(task Task) error {
-	srv.failoverTask = &promise{task: task}
+func (srv *TaskMux) Failver(task interface{}) error {
+	srv.failoverTask = &promise{task: TaskFrom(task)}
 	return nil
 }
 
@@ -150,7 +150,9 @@ func (srv *TaskMux) FinishInit() error {
 
 // Close task schedule and all subtasks
 func (srv *TaskMux) Close() error {
-	srv.monitor.deregister()
+	if srv.monitor != nil {
+		srv.monitor.deregister()
+	}
 	var err multiError
 	if srv == nil || srv.tasks == nil {
 		return nil

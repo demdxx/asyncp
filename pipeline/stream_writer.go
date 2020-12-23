@@ -10,9 +10,13 @@ import (
 // ErrResponseRepeatUnsupported in case of pipeline
 var ErrResponseRepeatUnsupported = errors.New("response repeat unsupported in pipeline")
 
+type eventPoolItem struct {
+	data []asyncp.Event
+}
+
 var eventPool = &sync.Pool{
 	New: func() interface{} {
-		return make([]asyncp.Event, 0, 100)
+		return &eventPoolItem{data: make([]asyncp.Event, 0, 100)}
 	},
 }
 
@@ -29,7 +33,7 @@ func newStream(event asyncp.Event) *stream {
 	return &stream{
 		cursor:      0,
 		parentEvent: event,
-		pool:        eventPool.Get().([]asyncp.Event),
+		pool:        eventPool.Get().(*eventPoolItem).data,
 	}
 }
 
@@ -66,8 +70,7 @@ func (stream *stream) Reset() {
 
 func (stream *stream) Close() error {
 	stream.Reset()
-	//lint:ignore SA6002 Using pointer would allocate more since we would have to copy slice header before taking a pointer.
-	eventPool.Put(stream.pool)
+	eventPool.Put(&eventPoolItem{data: stream.pool})
 	return nil
 }
 

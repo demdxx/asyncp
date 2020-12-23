@@ -121,9 +121,9 @@ func (s *Storage) TaskInfo(name string) (*monitor.TaskInfo, error) {
 
 // IncTaskInfo increments particular task info
 func (s *Storage) IncTaskInfo(name string, execTime time.Duration, err error) error {
-	taskInfo, err := s.TaskInfo(name)
-	if err != nil {
-		return err
+	taskInfo, errInfo := s.TaskInfo(name)
+	if errInfo != nil {
+		return errInfo
 	}
 	taskInfo.Inc(err, execTime)
 	pipe := s.client.TxPipeline()

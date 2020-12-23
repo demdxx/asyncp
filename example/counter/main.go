@@ -62,8 +62,8 @@ func main() {
 		interval.WithHandler(func() interface{} {
 			return asyncp.WithPayload("count", iterator)
 		}))
-	sub.Subscribe(ctx, mux)
+	_ = sub.Subscribe(ctx, mux)
 
 	fmt.Println("> run listener")
-	sub.Listen(ctx)
+	_ = sub.Listen(ctx)
 }

@@ -9,6 +9,10 @@ GO111MODULE := on
 test:
 	go test -race ./...
 
+.PHONY: lint
+lint:
+	GL_DEBUG=true golangci-lint run -v ./...
+
 .PHONY: run-monitor-test
 run-monitor-test:
 	rm -fR .build/

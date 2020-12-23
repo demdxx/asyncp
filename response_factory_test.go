@@ -17,7 +17,7 @@ func (p *testPublisher) Publish(ctx context.Context, messages ...interface{}) er
 func TestMultistreamResponseFactory(t *testing.T) {
 	fc := NewMultistreamResponseFactory(
 		"item1", "item2", &testPublisher{name: "test1"},
-		regexp.MustCompile("item\\d+"), &testPublisher{name: "test2"},
+		regexp.MustCompile(`item\d+`), &testPublisher{name: "test2"},
 		&testPublisher{name: "test3"},
 	).(*mutistreamResponseFactory)
 
