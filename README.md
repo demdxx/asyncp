@@ -1,9 +1,9 @@
 # Asyncp processing framework
 
-[![Build Status](https://travis-ci.org/demdxx/asyncp.svg?branch=master)](https://travis-ci.org/demdxx/asyncp)
+[![Build Status](https://github.com/demdxx/asyncp/workflows/run%20tests/badge.svg)](https://github.com/demdxx/asyncp/actions?workflow=run%20tests)
+[![Coverage Status](https://coveralls.io/repos/github/demdxx/asyncp/badge.svg?branch=master)](https://coveralls.io/github/demdxx/asyncp?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/demdxx/asyncp)](https://goreportcard.com/report/github.com/demdxx/asyncp)
 [![GoDoc](https://godoc.org/github.com/demdxx/asyncp?status.svg)](https://godoc.org/github.com/demdxx/asyncp)
-[![Coverage Status](https://coveralls.io/repos/github/demdxx/asyncp/badge.svg)](https://coveralls.io/github/demdxx/asyncp)
 
 > License Apache 2.0
 
