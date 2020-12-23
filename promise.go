@@ -17,7 +17,7 @@ type Promise interface {
 	TargetEvent(name string) Promise
 
 	// Then execute the next task if current succeded
-	Then(task Task) Promise
+	Then(handler interface{}) Promise
 
 	// ThenEvent which need to execute
 	ThenEvent(name string)
@@ -68,8 +68,8 @@ func (prom *promise) TargetEvent(name string) Promise {
 	return prom
 }
 
-func (prom *promise) Then(task Task) Promise {
-	p := prom.mux.Handle(prom.genTargetEvent(), task)
+func (prom *promise) Then(handler interface{}) Promise {
+	p := prom.mux.Handle(prom.genTargetEvent(), TaskFrom(handler))
 	p.(*promise).parent = prom
 	return p
 }
