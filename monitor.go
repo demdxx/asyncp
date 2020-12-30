@@ -58,10 +58,10 @@ func (m *Monotor) receiveEvent(event Event, err error) {
 	if m == nil {
 		return
 	}
-	var targetEvent monitor.EventType = event
+	targetEvent := monitor.EventType(event)
 	if event == nil {
 		targetEvent = monitor.NewErrorEvent(err)
-	} else {
+	} else if err != nil {
 		targetEvent = event.WithError(err)
 	}
 	for _, st := range m.updaters {
@@ -73,10 +73,10 @@ func (m *Monotor) execEvent(failover bool, event Event, execTime time.Duration, 
 	if m == nil {
 		return
 	}
-	var targetEvent monitor.EventType = event
+	targetEvent := monitor.EventType(event)
 	if event == nil {
 		targetEvent = monitor.NewErrorEvent(err)
-	} else {
+	} else if err != nil {
 		targetEvent = event.WithError(err)
 	}
 	for _, up := range m.updaters {
