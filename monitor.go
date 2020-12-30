@@ -11,11 +11,11 @@ type Monotor struct {
 	appName  string
 	host     string
 	hostname string
-	storages []monitor.MetricUpdater
+	updaters []monitor.MetricUpdater
 }
 
 // NewMonitor accessor
-func NewMonitor(appName, host, hostname string, storage ...monitor.MetricUpdater) *Monotor {
+func NewMonitor(appName, host, hostname string, updater ...monitor.MetricUpdater) *Monotor {
 	if host == "" {
 		host = localIP()
 	}
@@ -23,7 +23,7 @@ func NewMonitor(appName, host, hostname string, storage ...monitor.MetricUpdater
 		appName:  appName,
 		host:     host,
 		hostname: hostname,
-		storages: storage,
+		updaters: updater,
 	}
 }
 
@@ -37,8 +37,8 @@ func (m *Monotor) register(mux *TaskMux) error {
 		Hostname: m.hostname,
 		Tasks:    mux.EventMap(),
 	}
-	for _, st := range m.storages {
-		if err := st.RegisterApplication(appInfo); err != nil {
+	for _, up := range m.updaters {
+		if err := up.RegisterApplication(appInfo); err != nil {
 			return err
 		}
 	}
@@ -49,7 +49,7 @@ func (m *Monotor) deregister() {
 	if m == nil {
 		return
 	}
-	for _, st := range m.storages {
+	for _, st := range m.updaters {
 		_ = st.DeregisterApplication()
 	}
 }
@@ -58,8 +58,14 @@ func (m *Monotor) receiveEvent(event Event, err error) {
 	if m == nil {
 		return
 	}
-	for _, st := range m.storages {
-		_ = st.IncReceiveCount()
+	var targetEvent monitor.EventType = event
+	if event == nil {
+		targetEvent = monitor.NewErrorEvent(err)
+	} else {
+		targetEvent = event.WithError(err)
+	}
+	for _, st := range m.updaters {
+		_ = st.ReceiveEvent(targetEvent)
 	}
 }
 
@@ -67,11 +73,17 @@ func (m *Monotor) execEvent(failover bool, event Event, execTime time.Duration, 
 	if m == nil {
 		return
 	}
-	for _, st := range m.storages {
+	var targetEvent monitor.EventType = event
+	if event == nil {
+		targetEvent = monitor.NewErrorEvent(err)
+	} else {
+		targetEvent = event.WithError(err)
+	}
+	for _, up := range m.updaters {
 		if failover {
-			_ = st.IncFailoverTaskInfo(execTime, err)
+			_ = up.ExecuteFailoverTask(targetEvent, execTime)
 		} else {
-			_ = st.IncTaskInfo(event.Name(), execTime, err)
+			_ = up.ExecuteTask(targetEvent, execTime)
 		}
 	}
 }

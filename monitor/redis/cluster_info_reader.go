@@ -74,6 +74,27 @@ func (s *ClusterInfoReader) TaskInfo(name string) (*monitor.TaskInfo, error) {
 	return &taskInfo, nil
 }
 
+// TaskInfoByID retuns information about the particular task
+func (s *ClusterInfoReader) TaskInfoByID(id string) (*monitor.TaskInfo, error) {
+	appList, err := s.ListOfNodes()
+	if err != nil {
+		return nil, err
+	}
+	var taskInfo monitor.TaskInfo
+	for _, id := range appList {
+		storage, err := newWithApplication(s.client, s.appName, id)
+		if err != nil {
+			return nil, err
+		}
+		info, err := storage.TaskInfoByID(id)
+		if err != nil {
+			return nil, err
+		}
+		taskInfo.Add(info)
+	}
+	return &taskInfo, nil
+}
+
 // ListOfNodes returns list of registered nodes
 func (s *ClusterInfoReader) ListOfNodes() ([]string, error) {
 	s.mx.Lock()

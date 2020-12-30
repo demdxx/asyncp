@@ -7,6 +7,7 @@ require (
 	github.com/demdxx/rpool v0.0.0-20200317152850-d737c64d8aaf
 	github.com/geniusrabbit/notificationcenter v1.3.2-0.20201018151158-5c4710eabacd
 	github.com/go-redis/redis v6.15.9+incompatible
+	github.com/google/uuid v1.1.2
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/onsi/ginkgo v1.14.2 // indirect
 	github.com/pkg/errors v0.9.1

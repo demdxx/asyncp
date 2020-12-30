@@ -1,14 +1,16 @@
 package monitor
 
-import "time"
+import (
+	"time"
+)
 
 // MetricUpdater increments data metric
 type MetricUpdater interface {
 	RegisterApplication(appInfo *ApplicationInfo) error
 	DeregisterApplication() error
-	IncReceiveCount() error
-	IncTaskInfo(name string, execTime time.Duration, err error) error
-	IncFailoverTaskInfo(execTime time.Duration, err error) error
+	ReceiveEvent(event EventType) error
+	ExecuteTask(event EventType, execTime time.Duration) error
+	ExecuteFailoverTask(event EventType, execTime time.Duration) error
 }
 
 // MetricReader of information
@@ -29,5 +31,6 @@ type Storage interface {
 type ClusterInfoReader interface {
 	ApplicationInfo() (*ApplicationInfo, error)
 	TaskInfo(name string) (*TaskInfo, error)
+	TaskInfoByID(id string) (*TaskInfo, error)
 	ListOfNodes() ([]string, error)
 }

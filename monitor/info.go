@@ -37,12 +37,17 @@ type TaskInfo struct {
 	MinExecTime  time.Duration `json:"min_exec_time"`
 	AvgExecTime  time.Duration `json:"avg_exec_time"`
 	MaxExecTime  time.Duration `json:"max_exec_time"`
+	TaskNames    []string      `json:"task_names,omitempty"`
 }
 
 // Inc counters
 func (task *TaskInfo) Inc(err error, execTime time.Duration) {
 	task.TotalCount++
-	task.SuccessCount++
+	if err != nil {
+		task.ErrorCount++
+	} else {
+		task.SuccessCount++
+	}
 	if task.MinExecTime == 0 || task.MinExecTime > execTime {
 		task.MinExecTime = execTime
 	}
@@ -50,12 +55,18 @@ func (task *TaskInfo) Inc(err error, execTime time.Duration) {
 		task.MaxExecTime = execTime
 	}
 	if task.AvgExecTime == 0 {
-		task.AvgExecTime = (task.AvgExecTime + execTime) / 2
+		task.AvgExecTime = execTime
+	} else {
+		task.AvgExecTime = (task.AvgExecTime*time.Duration(task.TotalCount) + execTime) /
+			time.Duration(task.TotalCount+1)
 	}
 }
 
 // Add task info
 func (task *TaskInfo) Add(info *TaskInfo) {
+	if info == nil {
+		return
+	}
 	task.TotalCount += info.TotalCount
 	task.ErrorCount += info.ErrorCount
 	task.SuccessCount += info.SuccessCount
@@ -65,5 +76,20 @@ func (task *TaskInfo) Add(info *TaskInfo) {
 	if task.MaxExecTime == 0 || task.MaxExecTime < info.MaxExecTime {
 		task.MaxExecTime = info.MaxExecTime
 	}
-	task.AvgExecTime = (task.AvgExecTime + info.AvgExecTime) / 2
+	task.AvgExecTime = (task.AvgExecTime*time.Duration(task.TotalCount) +
+		info.AvgExecTime*time.Duration(info.TotalCount)) /
+		(time.Duration(task.TotalCount) + time.Duration(info.TotalCount))
+	for _, name := range info.TaskNames {
+		task.AddTaskName(name)
+	}
+}
+
+// AddTaskName to the list
+func (task *TaskInfo) AddTaskName(name string) {
+	for _, taskName := range task.TaskNames {
+		if taskName == name {
+			return
+		}
+	}
+	task.TaskNames = append(task.TaskNames, name)
 }
