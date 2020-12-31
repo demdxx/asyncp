@@ -32,5 +32,5 @@ type ClusterInfoReader interface {
 	ApplicationInfo() (*ApplicationInfo, error)
 	TaskInfo(name string) (*TaskInfo, error)
 	TaskInfoByID(id string) (*TaskInfo, error)
-	ListOfNodes() ([]string, error)
+	ListOfNodes() (map[string][]string, int, error)
 }

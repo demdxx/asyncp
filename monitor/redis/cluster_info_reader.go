@@ -4,50 +4,52 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/demdxx/asyncp/monitor"
 	"github.com/demdxx/gocast"
 	"github.com/go-redis/redis"
+	"go.uber.org/multierr"
 )
 
 // ClusterInfoReader overrides group node accessing
 type ClusterInfoReader struct {
 	mx sync.Mutex
 
-	appID   []string
-	appName string
+	appName []string
 	client  redis.Cmdable
+
+	storageList   []*Storage
+	lastUpdated   time.Time
+	cacheLifetime time.Duration
 }
 
 // NewClusterInfoReader interface implementation
-func NewClusterInfoReader(client redis.Cmdable, appName string) *ClusterInfoReader {
+func NewClusterInfoReader(client redis.Cmdable, appName ...string) *ClusterInfoReader {
 	return &ClusterInfoReader{
-		appName: appName,
-		client:  client,
+		appName:       appName,
+		client:        client,
+		cacheLifetime: time.Minute,
 	}
 }
 
 // NewClusterInfoReaderByURL from URL
-func NewClusterInfoReaderByURL(connectURL, appName string) (*ClusterInfoReader, error) {
+func NewClusterInfoReaderByURL(connectURL string, appName ...string) (*ClusterInfoReader, error) {
 	redisClient, err := connectRedis(connectURL)
 	if err != nil {
 		return nil, err
 	}
-	return NewClusterInfoReader(redisClient, appName), nil
+	return NewClusterInfoReader(redisClient, appName...), nil
 }
 
 // ApplicationInfo returns application information
 func (s *ClusterInfoReader) ApplicationInfo() (*monitor.ApplicationInfo, error) {
-	appList, err := s.ListOfNodes()
+	storageList, err := s.ListStorages()
 	if err != nil {
 		return nil, err
 	}
 	var appInfo monitor.ApplicationInfo
-	for _, id := range appList {
-		storage, err := newWithApplication(s.client, s.appName, id)
-		if err != nil {
-			return nil, err
-		}
+	for _, storage := range storageList {
 		appInfo.Merge(storage.ApplicationInfo())
 	}
 	return &appInfo, nil
@@ -55,16 +57,12 @@ func (s *ClusterInfoReader) ApplicationInfo() (*monitor.ApplicationInfo, error) 
 
 // TaskInfo retuns information about the task
 func (s *ClusterInfoReader) TaskInfo(name string) (*monitor.TaskInfo, error) {
-	appList, err := s.ListOfNodes()
+	storageList, err := s.ListStorages()
 	if err != nil {
 		return nil, err
 	}
 	var taskInfo monitor.TaskInfo
-	for _, id := range appList {
-		storage, err := newWithApplication(s.client, s.appName, id)
-		if err != nil {
-			return nil, err
-		}
+	for _, storage := range storageList {
 		info, err := storage.TaskInfo(name)
 		if err != nil {
 			return nil, err
@@ -76,16 +74,12 @@ func (s *ClusterInfoReader) TaskInfo(name string) (*monitor.TaskInfo, error) {
 
 // TaskInfoByID retuns information about the particular task
 func (s *ClusterInfoReader) TaskInfoByID(id string) (*monitor.TaskInfo, error) {
-	appList, err := s.ListOfNodes()
+	storageList, err := s.ListStorages()
 	if err != nil {
 		return nil, err
 	}
 	var taskInfo monitor.TaskInfo
-	for _, id := range appList {
-		storage, err := newWithApplication(s.client, s.appName, id)
-		if err != nil {
-			return nil, err
-		}
+	for _, storage := range storageList {
 		info, err := storage.TaskInfoByID(id)
 		if err != nil {
 			return nil, err
@@ -96,25 +90,52 @@ func (s *ClusterInfoReader) TaskInfoByID(id string) (*monitor.TaskInfo, error) {
 }
 
 // ListOfNodes returns list of registered nodes
-func (s *ClusterInfoReader) ListOfNodes() ([]string, error) {
+func (s *ClusterInfoReader) ListOfNodes() (map[string][]string, int, error) {
+	res := map[string][]string{}
+	count := 0
+	for _, appName := range s.appName {
+		prefix := fmt.Sprintf("%s:app_", appName)
+		resp := s.client.Keys(prefix + "*")
+		if resp.Err() != nil {
+			return nil, count, resp.Err()
+		}
+		list := make([]string, 0, len(resp.Val()))
+		for _, val := range resp.Val() {
+			list = append(list, strings.TrimPrefix(gocast.ToString(val), prefix))
+		}
+		res[appName] = list
+	}
+	return res, count, nil
+}
+
+// ListStorages returns the list of redis storages
+func (s *ClusterInfoReader) ListStorages() ([]*Storage, error) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
-	if len(s.appID) > 0 {
-		return s.appID, nil
+	if len(s.storageList) > 0 && time.Since(s.lastUpdated) <= s.cacheLifetime {
+		return s.storageList, nil
 	}
-	prefix := fmt.Sprintf("%s:app_", s.appName)
-	resp := s.client.Keys(prefix + "*")
-	if resp.Err() != nil {
-		return nil, resp.Err()
+	appList, count, err := s.ListOfNodes()
+	if err != nil {
+		return nil, err
 	}
-	list := make([]string, 0, len(resp.Val()))
-	for _, val := range resp.Val() {
-		list = append(list, strings.TrimPrefix(gocast.ToString(val), prefix))
+	storageList := make([]*Storage, 0, count)
+	for appName, hosts := range appList {
+		for _, host := range hosts {
+			storage, errStorage := newWithApplication(s.client, appName, host)
+			if err != nil {
+				err = multierr.Append(err, errStorage)
+			} else if storage != nil {
+				storageList = append(storageList, storage)
+			}
+		}
 	}
-	return list, nil
+	s.storageList = storageList
+	s.lastUpdated = time.Now()
+	return storageList, err
 }
 
 // ResetCache of the nodes
 func (s *ClusterInfoReader) ResetCache() {
-	s.appID = s.appID[:0]
+	s.storageList = s.storageList[:0]
 }
