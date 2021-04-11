@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/demdxx/gocast"
@@ -34,7 +35,7 @@ func main() {
 			&cli.StringFlag{
 				Name:     "app",
 				Aliases:  []string{"a"},
-				Usage:    "application name",
+				Usage:    "application names by ','",
 				EnvVars:  []string{"APMON_APPNAME"},
 				Required: true,
 			},
@@ -102,7 +103,8 @@ func connectStorage(connectURL, applicationName string) (monitor.ClusterInfoRead
 		if err != nil {
 			return nil, err
 		}
-		return kvstorage.NewClusterInfoReader(kvaccessor, applicationName), nil
+		return kvstorage.NewClusterInfoReader(kvaccessor,
+			strings.Split(applicationName, ",")...), nil
 	default:
 		return nil, fmt.Errorf("unsupported monitor storage: %s", parsedURL.Scheme)
 	}
