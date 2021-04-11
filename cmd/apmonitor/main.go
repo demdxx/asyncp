@@ -15,7 +15,8 @@ import (
 	cli "github.com/urfave/cli/v2"
 
 	"github.com/demdxx/asyncp/monitor"
-	"github.com/demdxx/asyncp/monitor/redis"
+	"github.com/demdxx/asyncp/monitor/driver/redis"
+	"github.com/demdxx/asyncp/monitor/kvstorage"
 )
 
 func main() {
@@ -97,7 +98,11 @@ func connectStorage(connectURL, applicationName string) (monitor.ClusterInfoRead
 	}
 	switch parsedURL.Scheme {
 	case "redis":
-		return redis.NewClusterInfoReaderByURL(connectURL, applicationName)
+		kvaccessor, err := redis.New(connectURL)
+		if err != nil {
+			return nil, err
+		}
+		return kvstorage.NewClusterInfoReader(kvaccessor, applicationName), nil
 	default:
 		return nil, fmt.Errorf("unsupported monitor storage: %s", parsedURL.Scheme)
 	}

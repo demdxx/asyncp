@@ -94,13 +94,19 @@ func (s *proxyResponseFactory) Release(w ResponseWriter) {
 }
 
 type multistreamItem struct {
+	tfn       []func(string) bool
 	patterns  []*regexp.Regexp
 	publisher Publisher
 }
 
 func (it *multistreamItem) test(eventName string) bool {
-	if len(it.patterns) == 0 {
+	if len(it.patterns) == 0 && len(it.tfn) == 0 {
 		return true
+	}
+	for _, f := range it.tfn {
+		if f(eventName) {
+			return true
+		}
 	}
 	for _, ptr := range it.patterns {
 		if ptr.MatchString(eventName) {
@@ -124,10 +130,20 @@ func NewMultistreamResponseFactory(streams ...interface{}) ResponseWriterFactory
 	)
 	for _, v := range streams {
 		switch val := v.(type) {
+		case []func(string) bool:
+			item.tfn = append(item.tfn, val...)
+		case func(string) bool:
+			item.tfn = append(item.tfn, val)
+		case []string:
+			for _, ptr := range val {
+				item.patterns = append(item.patterns, regexp.MustCompile(ptr))
+			}
 		case string:
 			item.patterns = append(item.patterns, regexp.MustCompile(val))
 		case *regexp.Regexp:
 			item.patterns = append(item.patterns, val)
+		case []*regexp.Regexp:
+			item.patterns = append(item.patterns, val...)
 		case Publisher:
 			item.publisher = val
 			if len(item.patterns) == 0 {

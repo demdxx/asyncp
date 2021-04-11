@@ -1,4 +1,4 @@
-package redis
+package kvstorage
 
 import (
 	"fmt"
@@ -8,7 +8,6 @@ import (
 
 	"github.com/demdxx/asyncp/monitor"
 	"github.com/demdxx/gocast"
-	"github.com/go-redis/redis"
 	"go.uber.org/multierr"
 )
 
@@ -16,8 +15,8 @@ import (
 type ClusterInfoReader struct {
 	mx sync.Mutex
 
-	appName []string
-	client  redis.Cmdable
+	appName  []string
+	kvclient KeyValueAccessor
 
 	storageList   []*Storage
 	lastUpdated   time.Time
@@ -25,21 +24,12 @@ type ClusterInfoReader struct {
 }
 
 // NewClusterInfoReader interface implementation
-func NewClusterInfoReader(client redis.Cmdable, appName ...string) *ClusterInfoReader {
+func NewClusterInfoReader(kvclient KeyValueAccessor, appName ...string) *ClusterInfoReader {
 	return &ClusterInfoReader{
 		appName:       appName,
-		client:        client,
+		kvclient:      kvclient,
 		cacheLifetime: time.Minute,
 	}
-}
-
-// NewClusterInfoReaderByURL from URL
-func NewClusterInfoReaderByURL(connectURL string, appName ...string) (*ClusterInfoReader, error) {
-	redisClient, err := connectRedis(connectURL)
-	if err != nil {
-		return nil, err
-	}
-	return NewClusterInfoReader(redisClient, appName...), nil
 }
 
 // ApplicationInfo returns application information
@@ -95,12 +85,12 @@ func (s *ClusterInfoReader) ListOfNodes() (map[string][]string, int, error) {
 	count := 0
 	for _, appName := range s.appName {
 		prefix := fmt.Sprintf("%s:app_", appName)
-		resp := s.client.Keys(prefix + "*")
-		if resp.Err() != nil {
-			return nil, count, resp.Err()
+		keys, err := s.kvclient.Keys(prefix + "*")
+		if err != nil {
+			return nil, count, err
 		}
-		list := make([]string, 0, len(resp.Val()))
-		for _, val := range resp.Val() {
+		list := make([]string, 0, len(keys))
+		for _, val := range keys {
 			list = append(list, strings.TrimPrefix(gocast.ToString(val), prefix))
 		}
 		res[appName] = list
@@ -122,7 +112,7 @@ func (s *ClusterInfoReader) ListStorages() ([]*Storage, error) {
 	storageList := make([]*Storage, 0, count)
 	for appName, hosts := range appList {
 		for _, host := range hosts {
-			storage, errStorage := newWithApplication(s.client, appName, host)
+			storage, errStorage := newWithApplication(s.kvclient, appName, host)
 			if err != nil {
 				err = multierr.Append(err, errStorage)
 			} else if storage != nil {

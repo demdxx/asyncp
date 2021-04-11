@@ -12,7 +12,8 @@ import (
 	"github.com/geniusrabbit/notificationcenter/interval"
 
 	"github.com/demdxx/asyncp"
-	"github.com/demdxx/asyncp/monitor/redis"
+	"github.com/demdxx/asyncp/monitor/driver/redis"
+	"github.com/demdxx/asyncp/monitor/kvstorage"
 )
 
 var (
@@ -27,9 +28,13 @@ func main() {
 	defer cancel()
 
 	fmt.Println("> connect storage")
-	redisStorage, err := redis.New(
-		redis.WithRedisURL(*storageFlag),
-		redis.WithTaskDetailInfo(time.Second*60))
+	redisDriver, err := redis.New(*storageFlag)
+	if err != nil {
+		log.Fatal(err)
+	}
+	redisStorage, err := kvstorage.New(
+		kvstorage.WithKVClient(redisDriver),
+		kvstorage.WithTaskDetailInfo(time.Second*60))
 	if err != nil {
 		log.Fatal(err)
 	}

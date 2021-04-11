@@ -1,4 +1,4 @@
-package redis
+package kvstorage
 
 import (
 	"encoding/json"
@@ -19,7 +19,7 @@ const failoverTaskName = "$failover"
 type Storage struct {
 	mx sync.RWMutex
 
-	client redis.Cmdable
+	client KeyValueAccessor
 
 	appInfo  *monitor.ApplicationInfo
 	taskInfo map[string]*monitor.TaskInfo
@@ -34,16 +34,15 @@ func New(opts ...Option) (*Storage, error) {
 	for _, opt := range opts {
 		opt(&options)
 	}
-	client, err := options.redisClient()
 	return &Storage{
-		client:       client,
+		client:       options.kvclient,
 		taskInfo:     map[string]*monitor.TaskInfo{},
 		taskRegister: options.taskLifetime != 0,
 		taskLifetime: options.taskLifetime,
-	}, err
+	}, nil
 }
 
-func newWithApplication(client redis.Cmdable, name, host string) (*Storage, error) {
+func newWithApplication(client KeyValueAccessor, name, host string) (*Storage, error) {
 	storage := &Storage{
 		client:   client,
 		taskInfo: map[string]*monitor.TaskInfo{},
@@ -75,22 +74,25 @@ func (s *Storage) RegisterApplication(appInfo *monitor.ApplicationInfo) error {
 
 // DeregisterApplication info in the storage
 func (s *Storage) DeregisterApplication() error {
-	return s.client.Del(s.mainKey()).Err()
+	return s.client.Del(s.mainKey())
 }
 
 // ReceiveCount returns count of received messages
 func (s *Storage) ReceiveCount() (uint64, error) {
-	return s.client.Get(s.metricKey("receive")).Uint64()
+	val, err := s.client.Get(s.metricKey("receive"))
+	if err != nil {
+		return 0, err
+	}
+	return gocast.ToUint64(val), nil
 }
 
 // ReceiveEvent register and increments counters
-func (s *Storage) ReceiveEvent(event monitor.EventType) error {
+func (s *Storage) ReceiveEvent(event monitor.EventType) (err error) {
 	if event.Err() != nil {
-		return s.client.Incr(s.metricKey("receive_error")).Err()
+		_, err = s.client.Incr(s.metricKey("receive_error"))
+	} else {
+		_, err = s.client.Incr(s.metricKey("receive"))
 	}
-	pipe := s.client.TxPipeline()
-	_ = pipe.Incr(s.metricKey("receive"))
-	_, err := pipe.Exec()
 	return err
 }
 
@@ -105,17 +107,16 @@ func (s *Storage) TaskInfo(name string) (*monitor.TaskInfo, error) {
 		s.mx.Lock()
 		defer s.mx.Unlock()
 		hasTaskInfo = true
-		dataResp := s.client.MGet(
+		vals, err := s.client.MGet(
 			s.metricKey(name+"_total"),
 			s.metricKey(name+"_error"),
 			s.metricKey(name+"_min"),
 			s.metricKey(name+"_avg"),
 			s.metricKey(name+"_max"),
 		)
-		if err := dataResp.Err(); err != nil {
+		if err != nil {
 			return nil, err
 		}
-		vals := dataResp.Val()
 		taskInfo = &monitor.TaskInfo{
 			TotalCount:   gocast.ToUint64(vals[0]),
 			ErrorCount:   gocast.ToUint64(vals[1]),
@@ -149,7 +150,10 @@ func (s *Storage) ExecuteTask(event monitor.EventType, execTime time.Duration) e
 	if errInfo != nil {
 		return errInfo
 	}
-	pipe := s.client.TxPipeline()
+	tx, err := s.client.Begin()
+	if err != nil {
+		return err
+	}
 
 	// Update the particular type with ID
 	if s.taskRegister && event.ID() != uuid.Nil {
@@ -160,7 +164,7 @@ func (s *Storage) ExecuteTask(event monitor.EventType, execTime time.Duration) e
 		}
 		taskIDInfo.Inc(event.Err(), execTime)
 		taskIDInfo.AddTaskName(event.Name())
-		if err := s.setJSON(s.metricKey(eventID), taskIDInfo, s.taskLifetime, pipe); err != nil {
+		if err := s.setJSON(s.metricKey(eventID), taskIDInfo, s.taskLifetime, tx); err != nil {
 			return err
 		}
 	}
@@ -168,17 +172,16 @@ func (s *Storage) ExecuteTask(event monitor.EventType, execTime time.Duration) e
 	// Update general task information
 	taskInfo.Inc(event.Err(), execTime)
 	eventName := event.Name()
-	pipe.Incr(s.metricKey(eventName + "_total"))
+	_, _ = tx.Incr(s.metricKey(eventName + "_total"))
 	if event.Err() != nil {
-		pipe.Incr(s.metricKey(eventName + "_error"))
+		_, _ = tx.Incr(s.metricKey(eventName + "_error"))
 	}
-	_ = pipe.MSet(
+	_ = tx.MSet(
 		s.metricKey(eventName+"_min"), int64(taskInfo.MinExecTime),
 		s.metricKey(eventName+"_avg"), int64(taskInfo.AvgExecTime),
 		s.metricKey(eventName+"_max"), int64(taskInfo.MaxExecTime),
 	)
-	_, execErr := pipe.Exec()
-	return execErr
+	return tx.Commit()
 }
 
 // FailoverTaskInfo retuns information about the failover task
@@ -193,38 +196,34 @@ func (s *Storage) ExecuteFailoverTask(event monitor.EventType, execTime time.Dur
 		execTime)
 }
 
-func (s *Storage) setJSON(key string, value interface{}, expiration time.Duration, pipe ...redis.Pipeliner) error {
+func (s *Storage) setJSON(key string, value interface{}, expiration time.Duration, tx ...KeyValueBasic) error {
 	data, err := json.Marshal(value)
 	if err != nil {
 		return err
 	}
-	var redisCmd redis.Cmdable = s.client
-	if len(pipe) > 0 && pipe[0] != nil {
-		redisCmd = pipe[0]
+	kvacc := s.client.(KeyValueBasic)
+	if len(tx) > 0 && tx[0] != nil {
+		kvacc = tx[0]
 	}
-	if expiration != 0 {
-		return redisCmd.SetNX(key, data, expiration).Err()
-	}
-	return redisCmd.Set(key, data, expiration).Err()
+	return kvacc.Set(key, string(data), expiration)
 }
 
-func (s *Storage) getJSON(key string, target interface{}, pipe ...redis.Pipeliner) error {
+func (s *Storage) getJSON(key string, target interface{}, tx ...KeyValueBasic) error {
 	var (
-		data string
-		err  error
+		err   error
+		data  interface{}
+		kvacc = s.client.(KeyValueBasic)
 	)
-	if len(pipe) > 0 && pipe[0] != nil {
-		data, err = pipe[0].Get(key).Result()
-	} else {
-		data, err = s.client.Get(key).Result()
+	if len(tx) > 0 && tx[0] != nil {
+		kvacc = tx[0]
 	}
-	if err != nil {
+	if data, err = kvacc.Get(key); err != nil {
 		if err == redis.Nil {
 			err = nil
 		}
 		return err
 	}
-	return json.Unmarshal([]byte(data), target)
+	return json.Unmarshal([]byte(gocast.ToString(data)), target)
 }
 
 func (s *Storage) mainKey() string {

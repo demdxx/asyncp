@@ -76,9 +76,11 @@ func (task *TaskInfo) Add(info *TaskInfo) {
 	if task.MaxExecTime == 0 || task.MaxExecTime < info.MaxExecTime {
 		task.MaxExecTime = info.MaxExecTime
 	}
-	task.AvgExecTime = (task.AvgExecTime*time.Duration(task.TotalCount) +
-		info.AvgExecTime*time.Duration(info.TotalCount)) /
-		(time.Duration(task.TotalCount) + time.Duration(info.TotalCount))
+	if task.TotalCount > 0 && info.TotalCount > 0 {
+		task.AvgExecTime = (task.AvgExecTime*time.Duration(task.TotalCount) +
+			info.AvgExecTime*time.Duration(info.TotalCount)) /
+			(time.Duration(task.TotalCount) + time.Duration(info.TotalCount))
+	}
 	for _, name := range info.TaskNames {
 		task.AddTaskName(name)
 	}
