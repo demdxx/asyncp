@@ -37,7 +37,8 @@ type TaskInfo struct {
 	MinExecTime  time.Duration `json:"min_exec_time"`
 	AvgExecTime  time.Duration `json:"avg_exec_time"`
 	MaxExecTime  time.Duration `json:"max_exec_time"`
-	TaskNames    []string      `json:"task_names,omitempty"`
+	TaskNames    []string      `json:"task_names,omitempty"` // The list of finished task names
+	UpdatedAt    time.Time     `json:"updated_at"`
 }
 
 // Inc counters
@@ -84,6 +85,7 @@ func (task *TaskInfo) Add(info *TaskInfo) {
 	for _, name := range info.TaskNames {
 		task.AddTaskName(name)
 	}
+	task.touch()
 }
 
 // AddTaskName to the list
@@ -94,4 +96,12 @@ func (task *TaskInfo) AddTaskName(name string) {
 		}
 	}
 	task.TaskNames = append(task.TaskNames, name)
+	task.touch()
+}
+
+func (task *TaskInfo) touch() {
+	now := time.Now()
+	if now.Sub(task.UpdatedAt) > 0 {
+		task.UpdatedAt = now
+	}
 }

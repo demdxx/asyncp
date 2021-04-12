@@ -113,7 +113,7 @@ func (s *ClusterInfoReader) ListStorages() ([]*Storage, error) {
 	for appName, hosts := range appList {
 		for _, host := range hosts {
 			storage, errStorage := newWithApplication(s.kvclient, appName, host)
-			if err != nil {
+			if errStorage != nil {
 				err = multierr.Append(err, errStorage)
 			} else if storage != nil {
 				storageList = append(storageList, storage)
