@@ -42,6 +42,9 @@ type TaskMux struct {
 
 	// Allocate new specific writer for every event separately
 	responseFactory ResponseWriterFactory
+
+	// EventAllocator provides interface of event object management
+	eventAllocator EventAllocator
 }
 
 // NewTaskMux server object
@@ -58,6 +61,7 @@ func NewTaskMux(options ...Option) *TaskMux {
 		contextWrapper:  opts.ContextWrapper,
 		responseFactory: opts.ResponseFactory,
 		monitor:         opts.Monitor,
+		eventAllocator:  opts._eventAllocator(),
 	}
 	if muxSet, ok := mux.responseFactory.(interface{ SetMux(mux *TaskMux) }); ok {
 		muxSet.SetMux(mux)
@@ -86,7 +90,12 @@ func (srv *TaskMux) Failver(task interface{}) error {
 
 // Receive definds the processing function
 func (srv *TaskMux) Receive(msg Message) error {
-	event, err := srv.eventDecode(msg.Body())
+	event, err := srv.eventAllocator.Decode(msg)
+	if err != nil {
+		defer func() {
+			_ = srv.eventAllocator.Release(event)
+		}()
+	}
 	srv.monitor.receiveEvent(event, err)
 	if err != nil {
 		return err
@@ -168,11 +177,6 @@ func (srv *TaskMux) borrowResponseWriter(ctx context.Context, prom *promise, eve
 		return &responseProxyWriter{mux: srv, event: event, promise: prom}
 	}
 	return srv.responseFactory.Borrow(ctx, prom, event)
-}
-
-func (srv *TaskMux) eventDecode(data []byte) (*event, error) {
-	event := &event{}
-	return event, event.Decode(data)
 }
 
 func (srv *TaskMux) newExecContext() context.Context {

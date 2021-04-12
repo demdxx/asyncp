@@ -215,6 +215,13 @@ func (ev *event) Decode(data []byte) error {
 	return nil
 }
 
+// Clear event object
+func (ev *event) Clear() {
+	ev.name = ""
+	ev.payload = nil
+	ev.err = nil
+}
+
 // UnmarshalJSON implements and wraps json.Unmarshaler interface
 func (ev *event) UnmarshalJSON(data []byte) error {
 	return ev.Decode(data)

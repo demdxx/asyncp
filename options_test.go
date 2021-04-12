@@ -19,6 +19,7 @@ func TestOptions(t *testing.T) {
 			WithResponseFactory(NewMultistreamResponseFactory("item2", &testPublisher{name: "test2"})),
 			WithStreamResponsePublisher(&testPublisher{name: "test3"}),
 			WithMonitorDefaults("test"),
+			WithEventAllocator(newDefaultEventAllocator()),
 		}
 	)
 	for _, opt := range optionFnk {
@@ -30,4 +31,7 @@ func TestOptions(t *testing.T) {
 	assert.NotNil(t, options.ContextWrapper)
 	assert.NotNil(t, options.ResponseFactory)
 	assert.NotNil(t, options.Monitor)
+	assert.NotNil(t, options.EventAllocator)
+	assert.NotNil(t, options._eventAllocator())
+	assert.NotNil(t, (&Options{})._eventAllocator())
 }

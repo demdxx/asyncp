@@ -25,6 +25,14 @@ type Options struct {
 	ContextWrapper  ContextWrapperFnk
 	ResponseFactory ResponseWriterFactory
 	Monitor         *Monotor
+	EventAllocator  EventAllocator
+}
+
+func (opt *Options) _eventAllocator() EventAllocator {
+	if opt.EventAllocator == nil {
+		return newDefaultEventAllocator()
+	}
+	return opt.EventAllocator
 }
 
 // Option of the task configuration
@@ -90,6 +98,13 @@ func WithMonitor(appName, host, hostname string, updater ...monitor.MetricUpdate
 func WithMonitorDefaults(appName string, updater ...monitor.MetricUpdater) Option {
 	hostname, _ := os.Hostname()
 	return WithMonitor(appName, localIP(), hostname, updater...)
+}
+
+// WithEventAllocator set option with event allocator
+func WithEventAllocator(eventAllocator EventAllocator) Option {
+	return func(opt *Options) {
+		opt.EventAllocator = eventAllocator
+	}
 }
 
 func localIP() string {
