@@ -2,11 +2,11 @@ package kvstorage
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
-	"github.com/go-redis/redis"
 	"github.com/google/uuid"
 
 	"github.com/demdxx/asyncp/monitor"
@@ -14,6 +14,9 @@ import (
 )
 
 const failoverTaskName = "$failover"
+
+// ErrNil in case of empty response
+var ErrNil = errors.New("nil response")
 
 // Storage monitor implementation for redis
 type Storage struct {
@@ -137,7 +140,7 @@ func (s *Storage) TaskInfo(name string) (*monitor.TaskInfo, error) {
 func (s *Storage) TaskInfoByID(id string) (*monitor.TaskInfo, error) {
 	taskInfo := &monitor.TaskInfo{}
 	err := s.getJSON(s.metricKey(id), &taskInfo)
-	if err != nil && err == redis.Nil {
+	if err != nil {
 		return nil, err
 	}
 	taskInfo.SuccessCount = taskInfo.TotalCount - taskInfo.ErrorCount
@@ -218,7 +221,7 @@ func (s *Storage) getJSON(key string, target interface{}, tx ...KeyValueBasic) e
 		kvacc = tx[0]
 	}
 	if data, err = kvacc.Get(key); err != nil {
-		if err == redis.Nil {
+		if err == ErrNil {
 			err = nil
 		}
 		return err

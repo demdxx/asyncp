@@ -28,7 +28,11 @@ func (acc *Accessor) Keys(pattern string) ([]string, error) {
 
 // Get value from key
 func (acc *Accessor) Get(key string) (interface{}, error) {
-	return acc.conn.Get(key).Result()
+	res, err := acc.conn.Get(key).Result()
+	if err == redis.Nil {
+		return res, kvstorage.ErrNil
+	}
+	return res, err
 }
 
 // MGet returns values from banch of keys in the same order
