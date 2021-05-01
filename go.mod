@@ -11,7 +11,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/onsi/ginkgo v1.16.1 // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/rivo/tview v0.0.0-20210312174852-ae9464cc3598
+	github.com/rivo/tview v0.0.0-20210427112837-09cec83b1732
 	github.com/stretchr/testify v1.7.0
 	github.com/urfave/cli/v2 v2.3.0
 	go.uber.org/multierr v1.6.0

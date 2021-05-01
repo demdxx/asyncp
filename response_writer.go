@@ -45,14 +45,14 @@ type responseProxyWriter struct {
 }
 
 func (wr *responseProxyWriter) WriteResonse(value interface{}) error {
-	return wr.writeResonseWithEventName(wr.promise.TargetEventName(), value)
+	return wr.writeResonseWithEventName(wr.promise.TargetEventName(), value, false)
 }
 
 func (wr *responseProxyWriter) RepeatWithResponse(value interface{}) error {
-	return wr.writeResonseWithEventName(wr.promise.EventName(), value)
+	return wr.writeResonseWithEventName(wr.promise.EventName(), value, true)
 }
 
-func (wr *responseProxyWriter) writeResonseWithEventName(name string, value interface{}) error {
+func (wr *responseProxyWriter) writeResonseWithEventName(name string, value interface{}, repeat bool) error {
 	var ev Event
 	switch v := value.(type) {
 	case Event:
@@ -62,6 +62,11 @@ func (wr *responseProxyWriter) writeResonseWithEventName(name string, value inte
 	}
 	if ev.IsComplete() {
 		ev = ev.WithName(name)
+	}
+	if repeat {
+		ev = ev.Repeat(wr.event)
+	} else {
+		ev = ev.After(wr.event)
 	}
 	return wr.mux.ExecuteEvent(ev)
 }
@@ -82,14 +87,14 @@ type responseStreamWriter struct {
 }
 
 func (wr *responseStreamWriter) WriteResonse(value interface{}) error {
-	return wr.writeResonseWithEventName(wr.promise.TargetEventName(), value)
+	return wr.writeResonseWithEventName(wr.promise.TargetEventName(), value, false)
 }
 
 func (wr *responseStreamWriter) RepeatWithResponse(value interface{}) error {
-	return wr.writeResonseWithEventName(wr.promise.EventName(), value)
+	return wr.writeResonseWithEventName(wr.promise.EventName(), value, true)
 }
 
-func (wr *responseStreamWriter) writeResonseWithEventName(name string, value interface{}) error {
+func (wr *responseStreamWriter) writeResonseWithEventName(name string, value interface{}, repeat bool) error {
 	var ev Event
 	switch v := value.(type) {
 	case Event:
@@ -99,6 +104,11 @@ func (wr *responseStreamWriter) writeResonseWithEventName(name string, value int
 	}
 	if ev.IsComplete() {
 		ev = ev.WithName(name)
+	}
+	if repeat {
+		ev = ev.Repeat(wr.event)
+	} else {
+		ev = ev.After(wr.event)
 	}
 	return wr.wstream.Publish(wr.getExecContext(), ev)
 }

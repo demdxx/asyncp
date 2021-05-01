@@ -7,8 +7,12 @@ DOCKER_CONTAINER_IMAGE="demdxx/asyncp-monitor:latest"
 GO111MODULE := on
 
 .PHONY: test
-test:
+test: ## Run unit tests
 	go test -race ./...
+
+.PHONY: tidy
+tidy: ## Apply tidy to the module
+	go mod tidy
 
 .PHONY: lint
 lint:
@@ -44,3 +48,9 @@ docker-stop:
 .PHONY: redis-cli
 redis-cli:
 	$(DOCKER_COMPOSE) exec redis redis-cli
+
+.PHONY: help
+help:
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+
+.DEFAULT_GOAL := help

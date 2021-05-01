@@ -43,6 +43,18 @@ type Event interface {
 	// IsComplete returns marker of event completion
 	IsComplete() bool
 
+	// Counters returns current counter state
+	Counters() (sent, retranslated int)
+
+	// After provided event
+	After(e Event) Event
+
+	// Repeat event
+	Repeat(e Event) Event
+
+	// DoneEvents returns the list of previous event names
+	DoneEvents() []string
+
 	// Encode event to byte array
 	Encode() ([]byte, error)
 
@@ -52,12 +64,15 @@ type Event interface {
 
 // event structure with basic implementation of event interface
 type event struct {
-	notComplete bool
-	id          uuid.UUID
-	name        string
-	payload     Payload
-	err         error
-	createdAt   time.Time
+	notComplete      bool
+	id               uuid.UUID
+	name             string
+	doneEvents       []string
+	payload          Payload
+	sendCount        int
+	retranslateCount int
+	err              error
+	createdAt        time.Time
 }
 
 // WithPayload returns new event object with payload data
@@ -74,11 +89,14 @@ func WithPayload(eventName string, data interface{}) Event {
 		}
 	}
 	return &event{
-		id:        id,
-		name:      eventName,
-		payload:   payload,
-		err:       err,
-		createdAt: time.Now(),
+		id:               id,
+		name:             eventName,
+		doneEvents:       nil,
+		payload:          payload,
+		sendCount:        0,
+		retranslateCount: 0,
+		err:              err,
+		createdAt:        time.Now(),
 	}
 }
 
@@ -90,12 +108,15 @@ func (ev *event) String() string {
 // Copy event object
 func (ev *event) Copy() *event {
 	return &event{
-		notComplete: ev.notComplete,
-		id:          ev.id,
-		name:        ev.name,
-		payload:     ev.payload,
-		err:         ev.err,
-		createdAt:   time.Now(),
+		notComplete:      ev.notComplete,
+		id:               ev.id,
+		name:             ev.name,
+		doneEvents:       append(make([]string, 0, len(ev.doneEvents)), ev.doneEvents...),
+		payload:          ev.payload,
+		sendCount:        ev.sendCount,
+		retranslateCount: ev.retranslateCount,
+		err:              ev.err,
+		createdAt:        time.Now(),
 	}
 }
 
@@ -145,6 +166,35 @@ func (ev *event) WithPayload(data interface{}) Event {
 	return newEvent
 }
 
+// Counters returns current counter state
+func (ev *event) Counters() (sent, retranslated int) {
+	return ev.sendCount, ev.retranslateCount
+}
+
+// After provided event
+func (ev *event) After(e Event) Event {
+	ev.sendCount, ev.retranslateCount = e.Counters()
+	ev.sendCount++
+	for _, name := range e.DoneEvents() {
+		if !ev.HasDoneEvent(name) {
+			ev.doneEvents = append(ev.doneEvents, name)
+		}
+	}
+	if !ev.HasDoneEvent(e.Name()) {
+		ev.doneEvents = append(ev.doneEvents, e.Name())
+	}
+	return ev
+}
+
+// Repeat event
+func (ev *event) Repeat(e Event) Event {
+	ev.sendCount, ev.retranslateCount = e.Counters()
+	ev.sendCount++
+	ev.retranslateCount++
+	ev.doneEvents = append(ev.doneEvents[:0], e.DoneEvents()...)
+	return ev
+}
+
 // WithError returns new event object with extended error value
 func (ev *event) WithError(err error) Event {
 	newEvent := ev.Copy()
@@ -162,12 +212,30 @@ func (ev *event) IsComplete() bool {
 	return !ev.notComplete
 }
 
+// DoneEvents returns the list of previous event names
+func (ev *event) DoneEvents() []string {
+	return ev.doneEvents
+}
+
+// HasDoneEvent with name
+func (ev *event) HasDoneEvent(name string) bool {
+	for _, doneEvent := range ev.doneEvents {
+		if doneEvent == name {
+			return true
+		}
+	}
+	return false
+}
+
 type encodeEvent struct {
-	ID        uuid.UUID `json:"id"`
-	Name      string    `json:"name"`
-	Payload   []byte    `json:"payload,omitempty"`
-	Err       string    `json:"error,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
+	ID               uuid.UUID `json:"id"`
+	Name             string    `json:"name"`
+	Payload          []byte    `json:"payload,omitempty"`
+	DoneEvents       []string  `json:"evdone,omitempty"`
+	SendCount        int       `json:"send_count,omitempty"`
+	RetranslateCount int       `json:"retranslate_count,omitempty"`
+	Err              string    `json:"error,omitempty"`
+	CreatedAt        time.Time `json:"created_at"`
 }
 
 // Encode event to byte array
@@ -183,11 +251,14 @@ func (ev *event) Encode() ([]byte, error) {
 		}
 	}
 	err = json.NewEncoder(&buff).Encode(&encodeEvent{
-		ID:        ev.id,
-		Name:      ev.name,
-		Payload:   data,
-		Err:       errorString(err),
-		CreatedAt: ev.createdAt,
+		ID:               ev.id,
+		Name:             ev.name,
+		Payload:          data,
+		DoneEvents:       ev.doneEvents,
+		SendCount:        ev.sendCount,
+		RetranslateCount: ev.retranslateCount,
+		Err:              errorString(err),
+		CreatedAt:        ev.createdAt,
 	})
 	if err != nil {
 		return nil, err
