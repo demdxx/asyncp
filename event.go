@@ -55,6 +55,9 @@ type Event interface {
 	// DoneEvents returns the list of previous event names
 	DoneEvents() []string
 
+	// HasDoneEvent
+	HasDoneEvent(name string) bool
+
 	// Encode event to byte array
 	Encode() ([]byte, error)
 
