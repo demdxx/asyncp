@@ -44,7 +44,7 @@ func main() {
 		asyncp.WithMonitorDefaults(*appnameFlag, redisStorage),
 	)
 	mux.Handle("count",
-		asyncp.FuncTask(func(_ context.Context, ev asyncp.Event, w asyncp.ResponseWriter) error {
+		func(_ context.Context, ev asyncp.Event, w asyncp.ResponseWriter) error {
 			iterator++
 			fmt.Println("TaskID:", ev.ID().String())
 			fmt.Println("TaskName:", ev.Name())
@@ -53,20 +53,20 @@ func main() {
 				return fmt.Errorf("random error for %d", iterator)
 			}
 			return w.WriteResonse(iterator)
-		})).
-		Then(asyncp.FuncTask(func(_ context.Context, ev asyncp.Event, w asyncp.ResponseWriter) error {
+		}).
+		Then(func(_ context.Context, ev asyncp.Event, w asyncp.ResponseWriter) error {
 			fmt.Println("TaskID:", ev.ID().String())
 			fmt.Println("TaskName:", ev.Name())
 			fmt.Println("Subtask:", iterator)
 			return mux.ExecuteEvent(ev.WithName("next-count").WithPayload(iterator))
-		}))
+		})
 	mux.Handle("next-count",
-		asyncp.FuncTask(func(_ context.Context, ev asyncp.Event, w asyncp.ResponseWriter) error {
+		func(_ context.Context, ev asyncp.Event, w asyncp.ResponseWriter) error {
 			fmt.Println("TaskID:", ev.ID().String())
 			fmt.Println("TaskName:", ev.Name())
 			fmt.Println("Next:", iterator)
 			return nil
-		}))
+		})
 	if err := mux.FinishInit(); err != nil {
 		log.Fatal(err)
 	}

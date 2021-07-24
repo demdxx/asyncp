@@ -23,6 +23,9 @@ type ProxySubscriber struct {
 
 // NewProxySubscriber object from list of subscribers
 func NewProxySubscriber(subs ...Subscriber) Subscriber {
+	if len(subs) == 1 {
+		return subs[0]
+	}
 	return &ProxySubscriber{subs: subs}
 }
 

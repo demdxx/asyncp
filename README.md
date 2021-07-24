@@ -23,6 +23,7 @@ execute the whole task or all not.
 import (
   ...
   "github.com/demdxx/asyncp"
+  "github.com/demdxx/asyncp/streams"
   ...
 )
 
@@ -63,8 +64,11 @@ func main() {
   // Retranslate all message to the queue if can`t process
   mx.Failver(asyncp.Retranslator(taskQueuePub))
 
-  taskQueueSub.Subscribe(context.Background(), mx)
-  taskQueueSub.Listen(context.Background())
+  // Alternative:
+  // taskQueueSub.Subscribe(context.Background(), mx)
+  // taskQueueSub.Listen(context.Background())
+  err = streams.ListenAndServe(context.Background(), mx,
+    taskQueueSub, "nats://host:2222/group?topics=topicName")
 }
 ```
 

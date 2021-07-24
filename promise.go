@@ -82,6 +82,22 @@ func (prom *promise) Parent() Promise {
 	return prom.parent
 }
 
+func (prom *promise) Origin() (Promise, int) {
+	depth := 0
+	p := prom.Parent()
+	if p != nil {
+		for {
+			depth++
+			pr := p.Parent()
+			if pr == nil {
+				break
+			}
+			p = pr
+		}
+	}
+	return p, depth
+}
+
 func (prom *promise) Task() Task {
 	return prom.task
 }
@@ -93,14 +109,8 @@ func (prom *promise) Close() error {
 	return nil
 }
 
-func (prom *promise) originalEventName() (_ string, depth int) {
-	p := prom.Parent()
-	for ; p != nil; p = p.Parent() {
-		depth++
-		if p.Parent() == nil {
-			break
-		}
-	}
+func (prom *promise) originalEventName() (string, int) {
+	p, depth := prom.Origin()
 	if p == nil {
 		return ``, depth
 	}
@@ -113,7 +123,7 @@ func (prom *promise) genTargetEvent() string {
 		if depth > 1 {
 			prom.targetEventName = fmt.Sprintf(`%s.%d`, name, depth)
 		} else {
-			prom.targetEventName = fmt.Sprintf(`%s.%d`, prom.EventName(), 1)
+			prom.targetEventName = fmt.Sprintf(`%s.1`, prom.EventName())
 		}
 	}
 	return prom.targetEventName

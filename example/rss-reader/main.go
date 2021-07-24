@@ -115,9 +115,9 @@ func main() {
 	proxy := asyncp.NewProxySubscriber(mempr)
 
 	mx := asyncp.NewTaskMux(asyncp.WithStreamResponsePublisher(mempr.Publisher()))
-	mx.Handle("rss", asyncp.FuncTask(downloadRSSList)).
-		Then(asyncp.FuncTask(downloadRSSItem)).
-		Then(asyncp.FuncTask(printResults)).
+	mx.Handle("rss", downloadRSSList).
+		Then(downloadRSSItem).
+		Then(printResults).
 		Then(closeAction(proxy))
 	_ = mx.Failver(asyncp.Retranslator(mempr.Publisher()))
 
