@@ -45,7 +45,17 @@ type responseProxyWriter struct {
 }
 
 func (wr *responseProxyWriter) WriteResonse(value interface{}) error {
-	return wr.writeResonseWithEventName(wr.promise.TargetEventName(), value, false)
+	var (
+		errs   multiError
+		events = wr.promise.TargetEventName()
+	)
+	for _, eventName := range events {
+		errs.Add(wr.writeResonseWithEventName(eventName, value, false))
+	}
+	if len(events) == 0 {
+		errs.Add(wr.writeResonseWithEventName("", value, false))
+	}
+	return errs.AsError()
 }
 
 func (wr *responseProxyWriter) RepeatWithResponse(value interface{}) error {
@@ -87,7 +97,17 @@ type responseStreamWriter struct {
 }
 
 func (wr *responseStreamWriter) WriteResonse(value interface{}) error {
-	return wr.writeResonseWithEventName(wr.promise.TargetEventName(), value, false)
+	var (
+		errs   multiError
+		events = wr.promise.TargetEventName()
+	)
+	for _, eventName := range events {
+		errs.Add(wr.writeResonseWithEventName(eventName, value, false))
+	}
+	if len(events) == 0 {
+		errs.Add(wr.writeResonseWithEventName("", value, false))
+	}
+	return errs.AsError()
 }
 
 func (wr *responseStreamWriter) RepeatWithResponse(value interface{}) error {

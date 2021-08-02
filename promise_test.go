@@ -19,9 +19,11 @@ func TestPromise(t *testing.T) {
 	pr2 := pr1.Then(testTask)
 	pr3 := pr2.Then(testTask)
 
-	assert.Equal(t, "test.1", pr1.TargetEventName())
+	assert.ElementsMatch(t, []string{"test.1"}, pr1.TargetEventName())
+	assert.Equal(t, "test", pr2.AfterEventName())
 	assert.Equal(t, "test.1", pr2.EventName())
-	assert.Equal(t, "test.2", pr2.TargetEventName())
+	assert.ElementsMatch(t, []string{"test.2"}, pr2.TargetEventName())
+	assert.Equal(t, "test.1", pr3.AfterEventName())
 	assert.Equal(t, "test.2", pr3.EventName())
-	assert.Equal(t, "" /* */, pr3.TargetEventName())
+	assert.Nil(t, pr3.TargetEventName())
 }

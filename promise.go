@@ -11,7 +11,10 @@ type Promise interface {
 	EventName() string
 
 	// TargetEventName returns name of target event
-	TargetEventName() string
+	TargetEventName() []string
+
+	// AfterEventName map event in the event queue
+	AfterEventName() string
 
 	// TargetEvent define
 	TargetEvent(name string) Promise
@@ -34,7 +37,10 @@ type promise struct {
 	currentEventName string
 
 	// Writing target name
-	targetEventName string
+	targetEventName []string
+
+	// Map the task after the event
+	afterEventName string
 
 	// Parent promise object
 	parent Promise
@@ -59,12 +65,29 @@ func (prom *promise) EventName() string {
 	return prom.currentEventName
 }
 
-func (prom *promise) TargetEventName() string {
+func (prom *promise) TargetEventName() []string {
+	if len(prom.targetEventName) == 0 {
+		eventName, _ := prom.originalEventName()
+		if eventName != `` {
+			targetNames := prom.mux.targetEventsAfter(eventName)
+			if len(targetNames) > 0 {
+				return targetNames
+			}
+		}
+		return prom.mux.targetEventsAfter(prom.EventName())
+	}
 	return prom.targetEventName
 }
 
+func (prom *promise) AfterEventName() string {
+	if prom.afterEventName == `` && prom.parent != nil {
+		return prom.parent.EventName()
+	}
+	return prom.afterEventName
+}
+
 func (prom *promise) TargetEvent(name string) Promise {
-	prom.targetEventName = name
+	prom.ThenEvent(name)
 	return prom
 }
 
@@ -75,7 +98,7 @@ func (prom *promise) Then(handler interface{}) Promise {
 }
 
 func (prom *promise) ThenEvent(name string) {
-	prom.targetEventName = name
+	prom.targetEventName = []string{name}
 }
 
 func (prom *promise) Parent() Promise {
@@ -117,14 +140,16 @@ func (prom *promise) originalEventName() (string, int) {
 	return p.EventName(), depth + 1
 }
 
+// generate event name after the current one
 func (prom *promise) genTargetEvent() string {
-	if prom.targetEventName == `` {
+	if len(prom.targetEventName) == 0 {
 		name, depth := prom.originalEventName()
 		if depth > 1 {
-			prom.targetEventName = fmt.Sprintf(`%s.%d`, name, depth)
+			name = fmt.Sprintf(`%s.%d`, name, depth)
 		} else {
-			prom.targetEventName = fmt.Sprintf(`%s.1`, prom.EventName())
+			name = fmt.Sprintf(`%s.1`, prom.EventName())
 		}
+		prom.ThenEvent(name)
 	}
-	return prom.targetEventName
+	return prom.targetEventName[0]
 }

@@ -3,6 +3,7 @@ package asyncp
 import (
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/geniusrabbit/notificationcenter"
@@ -23,10 +24,10 @@ type TaskMux struct {
 	monitor *Monotor
 
 	// Chanel name + task with responser
-	tasks map[string]*promise
+	tasks map[string]Promise
 
 	// Default task if not found
-	failoverTask *promise
+	failoverTask Promise
 
 	// mainExecContext as default for any execution request
 	mainExecContext context.Context
@@ -54,7 +55,7 @@ func NewTaskMux(options ...Option) *TaskMux {
 		opt(&opts)
 	}
 	mux := &TaskMux{
-		tasks:           map[string]*promise{},
+		tasks:           map[string]Promise{},
 		panicHandler:    opts.PanicHandler,
 		errorHandler:    opts.ErrorHandler,
 		mainExecContext: opts.MainExecContext,
@@ -72,7 +73,7 @@ func NewTaskMux(options ...Option) *TaskMux {
 // Handle register new task for specific chanel
 func (srv *TaskMux) Handle(chanelName string, handler interface{}) Promise {
 	if srv.tasks == nil {
-		srv.tasks = map[string]*promise{}
+		srv.tasks = map[string]Promise{}
 	}
 	if _, ok := srv.tasks[chanelName]; ok {
 		panic(errors.Wrap(ErrChanelTaken, chanelName))
@@ -139,7 +140,7 @@ func (srv *TaskMux) ExecuteEvent(event Event) error {
 	wrt := srv.borrowResponseWriter(ctx, task, event)
 
 	// Execute the task
-	err := task.task.Execute(ctx, event, wrt)
+	err := task.Task().Execute(ctx, event, wrt)
 	srv.monitor.execEvent(isFailover, event, time.Since(startTime), err)
 
 	if err != nil {
@@ -167,12 +168,14 @@ func (srv *TaskMux) Close() error {
 		return nil
 	}
 	for _, promise := range srv.tasks {
-		err.Add(promise.Close())
+		if closer, ok := promise.(io.Closer); ok {
+			err.Add(closer.Close())
+		}
 	}
 	return err.AsError()
 }
 
-func (srv *TaskMux) borrowResponseWriter(ctx context.Context, prom *promise, event Event) ResponseWriter {
+func (srv *TaskMux) borrowResponseWriter(ctx context.Context, prom Promise, event Event) ResponseWriter {
 	if srv.responseFactory == nil {
 		return &responseProxyWriter{mux: srv, event: event, promise: prom}
 	}
@@ -190,12 +193,16 @@ func (srv *TaskMux) newExecContext() context.Context {
 	return ctx
 }
 
+func (srv *TaskMux) targetEventsAfter(eventName string) []string {
+	return nil
+}
+
 // EventMap returns linked list of events
-func (srv *TaskMux) EventMap() map[string]string {
+func (srv *TaskMux) EventMap() map[string][]string {
 	if srv.tasks == nil {
-		return map[string]string{}
+		return map[string][]string{}
 	}
-	mp := make(map[string]string, len(srv.tasks))
+	mp := make(map[string][]string, len(srv.tasks))
 	for eventName, promiseObject := range srv.tasks {
 		mp[eventName] = promiseObject.TargetEventName()
 	}

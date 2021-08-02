@@ -22,9 +22,9 @@ func TestTask(t *testing.T) {
 			}
 			return rw.RepeatWithResponse(i + 1)
 		}
-		failoverTask = FuncTask(func(_ context.Context, event Event, rw ResponseWriter) error {
+		failoverTask = func(_ context.Context, event Event, rw ResponseWriter) error {
 			return event.Payload().Decode(&result)
-		})
+		}
 		mux = NewTaskMux(
 			WithMainExecContext(ctx),
 			WithResponseFactory(NewProxyResponseFactory()),

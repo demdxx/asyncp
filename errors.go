@@ -45,6 +45,8 @@ func (e *multiError) Add(err error) {
 func (e multiError) AsError() error {
 	if len(e) == 0 {
 		return nil
+	} else if len(e) == 1 {
+		return e[0]
 	}
 	return e
 }

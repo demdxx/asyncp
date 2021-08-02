@@ -8,7 +8,7 @@ type ApplicationInfo struct {
 	Host     string               `json:"host"`
 	Hostname string               `json:"hostname"`
 	InitedAt time.Time            `json:"inited_at"`
-	Tasks    map[string]string    `json:"tasks"`
+	Tasks    map[string][]string  `json:"tasks"`
 	Servers  map[string]time.Time `json:"servers,omitempty"`
 }
 
@@ -21,7 +21,7 @@ func (app *ApplicationInfo) Merge(info *ApplicationInfo) {
 	app.Servers[info.Host] = info.InitedAt
 	if info.Tasks != nil {
 		if app.Tasks == nil {
-			app.Tasks = make(map[string]string, len(info.Tasks))
+			app.Tasks = make(map[string][]string, len(info.Tasks))
 		}
 		for taskName, taskTarget := range info.Tasks {
 			app.Tasks[taskName] = taskTarget
