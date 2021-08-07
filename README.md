@@ -37,6 +37,7 @@ func main() {
     asyncp.WithStreamResponseFactory(taskQueuePub),
     asyncp.WithPanicHandler(...),
     asyncp.WithErrorHandler(...),
+    asyncp.WithCluster(...),
   )
   defer func() { _ = mx.Close() }()
 
@@ -87,6 +88,27 @@ atask := asyncp.WrapAsyncTask(task,
 asyncp.FuncTask(assembleBasicInfo).Async()
 ```
 
+## Cluster mode
+
+The framework supports cluster task processing.
+Some of the servers can execute some specific tasks like video processing or windows specific stuff.
+
+To extend cluster base functionality need to create in other applications (with the same sync options)
+linked task `baseHandlerTaskName>myNewClusterTask`.
+
+```go
+func main() {
+  ...
+  // After RSS parsing we need to prcess video files from links if it's present
+  mx.Handle("rss>videoExtraction", loadVideoForProcessing).
+    Then(makeVideoThumbs).
+    Then(convertVideoFormat)
+  ...
+}
+```
+
 ## Apmonitor tool
+
+Displays state of the cluster and every task common state.
 
 ![apmonitor tool](docs/apmonitor.png "Apmonitor")

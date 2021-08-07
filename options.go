@@ -24,7 +24,7 @@ type Options struct {
 	ErrorHandler    ErrorHandlerFnk
 	ContextWrapper  ContextWrapperFnk
 	ResponseFactory ResponseWriterFactory
-	Monitor         *Monotor
+	Cluster         ClusterExt
 	EventAllocator  EventAllocator
 }
 
@@ -89,15 +89,23 @@ func WithStreamResponsePublisher(publisher Publisher) Option {
 
 // WithMonitor set option with monitoring storage
 func WithMonitor(appName, host, hostname string, updater ...monitor.MetricUpdater) Option {
-	return func(opt *Options) {
-		opt.Monitor = NewMonitor(appName, host, hostname, updater...)
-	}
+	return WithCluster(appName,
+		ClusterWithHostinfo(host, hostname),
+		ClusterWithStores(updater...),
+	)
 }
 
 // WithMonitorDefaults set option with monitoring storage
 func WithMonitorDefaults(appName string, updater ...monitor.MetricUpdater) Option {
 	hostname, _ := os.Hostname()
 	return WithMonitor(appName, localIP(), hostname, updater...)
+}
+
+// WithCluster set option of the cluster snchronizer
+func WithCluster(appName string, options ...ClusterOption) Option {
+	return func(opt *Options) {
+		opt.Cluster = NewCluster(appName, options...)
+	}
 }
 
 // WithEventAllocator set option with event allocator

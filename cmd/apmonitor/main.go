@@ -69,6 +69,7 @@ func runMonitor(c *cli.Context) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	iter := 0
 	ticker := time.NewTicker(interval)
 	app := tview.NewApplication()
 	textView := tview.NewTextView().
@@ -84,7 +85,8 @@ func runMonitor(c *cli.Context) error {
 				ticker.Stop()
 				return
 			case <-ticker.C:
-				updateInfo(textView, storage)
+				iter++
+				updateInfo(iter, textView, storage)
 			}
 		}
 	}()
@@ -110,7 +112,7 @@ func connectStorage(connectURL, applicationName string) (monitor.ClusterInfoRead
 	}
 }
 
-func updateInfo(textView *tview.TextView, info monitor.ClusterInfoReader) {
+func updateInfo(iter int, textView *tview.TextView, info monitor.ClusterInfoReader) {
 	textView.Clear()
 
 	appInfo, _ := info.ApplicationInfo()
@@ -123,6 +125,10 @@ func updateInfo(textView *tview.TextView, info monitor.ClusterInfoReader) {
 			nodeCount = len(appInfo.Servers)
 		}
 		for taskName := range appInfo.Tasks {
+			if strings.HasPrefix(taskName, "@") {
+				// Skip linked global event as it only for event type separating
+				continue
+			}
 			taskInfo, _ := info.TaskInfo(taskName)
 			item := []string{taskName, "?", "?", "?", "?", "?", "?"}
 			if taskInfo != nil {
@@ -141,9 +147,13 @@ func updateInfo(textView *tview.TextView, info monitor.ClusterInfoReader) {
 		return data[i][0] < data[j][0]
 	})
 
+	indicatror := ":"
+	if iter%2 == 0 {
+		indicatror = " "
+	}
 	table := tablewriter.NewWriter(textView)
 	table.SetHeader([]string{"task", "min", "max", "avg", "success", "error", "total"})
-	table.SetFooter([]string{"", "", "", "", "", "Nodes", gocast.ToString(nodeCount)})
+	table.SetFooter([]string{"", "", "", "", "", "Nodes" + indicatror, gocast.ToString(nodeCount)})
 	table.SetAutoWrapText(false)
 	table.SetAutoFormatHeaders(true)
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)

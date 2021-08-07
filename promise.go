@@ -30,6 +30,9 @@ type Promise interface {
 
 	// Task executor interface
 	Task() Task
+
+	// IsVirtual promise type
+	IsVirtual() bool
 }
 
 type promise struct {
@@ -67,9 +70,10 @@ func (prom *promise) EventName() string {
 
 func (prom *promise) TargetEventName() []string {
 	if len(prom.targetEventName) == 0 {
-		eventName, _ := prom.originalEventName()
-		if eventName != `` {
-			targetNames := prom.mux.targetEventsAfter(eventName)
+		prProm, eventName, _ := prom.originalEventName()
+		if eventName != `` && !prProm.IsVirtual() {
+			// Find the target after global event which is starts from `@`
+			targetNames := prom.mux.targetEventsAfter("@" + eventName)
 			if len(targetNames) > 0 {
 				return targetNames
 			}
@@ -132,18 +136,18 @@ func (prom *promise) Close() error {
 	return nil
 }
 
-func (prom *promise) originalEventName() (string, int) {
+func (prom *promise) originalEventName() (Promise, string, int) {
 	p, depth := prom.Origin()
 	if p == nil {
-		return ``, depth
+		return nil, ``, depth
 	}
-	return p.EventName(), depth + 1
+	return p, p.EventName(), depth + 1
 }
 
 // generate event name after the current one
 func (prom *promise) genTargetEvent() string {
 	if len(prom.targetEventName) == 0 {
-		name, depth := prom.originalEventName()
+		_, name, depth := prom.originalEventName()
 		if depth > 1 {
 			name = fmt.Sprintf(`%s.%d`, name, depth)
 		} else {
@@ -153,3 +157,6 @@ func (prom *promise) genTargetEvent() string {
 	}
 	return prom.targetEventName[0]
 }
+
+// IsVirtual promise type
+func (prom *promise) IsVirtual() bool { return false }

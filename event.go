@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -52,11 +53,11 @@ type Event interface {
 	// Repeat event
 	Repeat(e Event) Event
 
-	// DoneEvents returns the list of previous event names
-	DoneEvents() []string
+	// DoneTasks returns the list of previous event names
+	DoneTasks() []string
 
-	// HasDoneEvent
-	HasDoneEvent(name string) bool
+	// HasDoneTask checks is the tasks has been processed
+	HasDoneTask(name string) bool
 
 	// Encode event to byte array
 	Encode() ([]byte, error)
@@ -178,14 +179,15 @@ func (ev *event) Counters() (sent, retranslated int) {
 func (ev *event) After(e Event) Event {
 	ev.sendCount, ev.retranslateCount = e.Counters()
 	ev.sendCount++
-	for _, name := range e.DoneEvents() {
-		if !ev.HasDoneEvent(name) {
+	for _, name := range e.DoneTasks() {
+		if !ev.HasDoneTask(name) {
 			ev.doneEvents = append(ev.doneEvents, name)
 		}
 	}
-	if !ev.HasDoneEvent(e.Name()) {
+	if !ev.HasDoneTask(e.Name()) {
 		ev.doneEvents = append(ev.doneEvents, e.Name())
 	}
+	sort.Strings(ev.doneEvents)
 	return ev
 }
 
@@ -194,7 +196,7 @@ func (ev *event) Repeat(e Event) Event {
 	ev.sendCount, ev.retranslateCount = e.Counters()
 	ev.sendCount++
 	ev.retranslateCount++
-	ev.doneEvents = append(ev.doneEvents[:0], e.DoneEvents()...)
+	ev.doneEvents = append(ev.doneEvents[:0], e.DoneTasks()...)
 	return ev
 }
 
@@ -215,13 +217,13 @@ func (ev *event) IsComplete() bool {
 	return !ev.notComplete
 }
 
-// DoneEvents returns the list of previous event names
-func (ev *event) DoneEvents() []string {
+// DoneTasks returns the list of previous event names
+func (ev *event) DoneTasks() []string {
 	return ev.doneEvents
 }
 
-// HasDoneEvent with name
-func (ev *event) HasDoneEvent(name string) bool {
+// HasDoneTask with name
+func (ev *event) HasDoneTask(name string) bool {
 	for _, doneEvent := range ev.doneEvents {
 		if doneEvent == name {
 			return true

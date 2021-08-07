@@ -27,5 +27,5 @@ func TestEventAfter(t *testing.T) {
 	event2 := WithPayload(`test2`, 100).After(event1)
 	event3 := WithPayload(`test3`, 100).After(event2)
 
-	assert.ElementsMatch(t, []string{`test1`, `test2`}, event3.DoneEvents())
+	assert.ElementsMatch(t, []string{`test1`, `test2`}, event3.DoneTasks())
 }

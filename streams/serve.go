@@ -2,6 +2,7 @@ package streams
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/demdxx/asyncp"
@@ -29,8 +30,12 @@ func ListenAndServe(ctx context.Context, srv *asyncp.TaskMux, sources ...interfa
 			log.Print(err.Error())
 		}
 	}()
+	fmt.Println("GGG-0", subs != nil)
 	if err := subs.Subscribe(ctx, srv); err != nil {
 		return err
 	}
-	return subs.Listen(ctx)
+	fmt.Println("GGG-1")
+	e := subs.Listen(ctx)
+	fmt.Println("GGG-2", e)
+	return e
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/demdxx/asyncp"
 	"github.com/demdxx/asyncp/monitor/driver/redis"
 	"github.com/demdxx/asyncp/monitor/kvstorage"
+	"github.com/demdxx/asyncp/streams"
 )
 
 var (
@@ -41,7 +42,9 @@ func main() {
 
 	iterator := 0
 	mux := asyncp.NewTaskMux(
-		asyncp.WithMonitorDefaults(*appnameFlag, redisStorage),
+		asyncp.WithCluster(*appnameFlag,
+			asyncp.ClusterWithReader(kvstorage.NewClusterInfoReader(redisDriver, *appnameFlag)),
+			asyncp.ClusterWithStores(redisStorage)),
 	)
 	mux.Handle("count",
 		func(_ context.Context, ev asyncp.Event, w asyncp.ResponseWriter) error {
@@ -58,9 +61,12 @@ func main() {
 			fmt.Println("TaskID:", ev.ID().String())
 			fmt.Println("TaskName:", ev.Name())
 			fmt.Println("Subtask:", iterator)
-			return mux.ExecuteEvent(ev.WithName("next-count").WithPayload(iterator))
+			// return mux.ExecuteEvent(ev.WithName("next-count").WithPayload(iterator))
+			return w.WriteResonse(iterator)
 		})
-	mux.Handle("next-count",
+	// Execute task with name "next-count" right after the "count" task.
+	// This king of events can't be used for parent mapping
+	mux.Handle("count>next-count",
 		func(_ context.Context, ev asyncp.Event, w asyncp.ResponseWriter) error {
 			fmt.Println("TaskID:", ev.ID().String())
 			fmt.Println("TaskName:", ev.Name())
@@ -77,8 +83,7 @@ func main() {
 			return asyncp.WithPayload("count", iterator)
 		}),
 		interval.WithErrorHandler(func(_ nc.Message, err error) {}))
-	_ = sub.Subscribe(ctx, mux)
 
-	fmt.Println("> run listener")
-	_ = sub.Listen(ctx)
+	fmt.Println("> run listener", sub != nil)
+	_ = streams.ListenAndServe(ctx, mux, sub)
 }

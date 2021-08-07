@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/geniusrabbit/notificationcenter"
@@ -20,11 +21,14 @@ type Stream = notificationcenter.Publisher
 
 // TaskMux object which controls the workflow of task execution
 type TaskMux struct {
-	// monitor accessor
-	monitor *Monotor
+	cluster ClusterExt
 
 	// Chanel name + task with responser
 	tasks map[string]Promise
+
+	// Maps final task of the chanel with tasks from other chanels or clusters.
+	// All linked external events starts from `@`; @globalEvent -> targetEvent
+	hiddenTaskMapping map[string][]string
 
 	// Default task if not found
 	failoverTask Promise
@@ -55,14 +59,15 @@ func NewTaskMux(options ...Option) *TaskMux {
 		opt(&opts)
 	}
 	mux := &TaskMux{
-		tasks:           map[string]Promise{},
-		panicHandler:    opts.PanicHandler,
-		errorHandler:    opts.ErrorHandler,
-		mainExecContext: opts.MainExecContext,
-		contextWrapper:  opts.ContextWrapper,
-		responseFactory: opts.ResponseFactory,
-		monitor:         opts.Monitor,
-		eventAllocator:  opts._eventAllocator(),
+		tasks:             map[string]Promise{},
+		hiddenTaskMapping: map[string][]string{},
+		panicHandler:      opts.PanicHandler,
+		errorHandler:      opts.ErrorHandler,
+		mainExecContext:   opts.MainExecContext,
+		contextWrapper:    opts.ContextWrapper,
+		responseFactory:   opts.ResponseFactory,
+		cluster:           opts.Cluster,
+		eventAllocator:    opts._eventAllocator(),
 	}
 	if muxSet, ok := mux.responseFactory.(interface{ SetMux(mux *TaskMux) }); ok {
 		muxSet.SetMux(mux)
@@ -71,15 +76,28 @@ func NewTaskMux(options ...Option) *TaskMux {
 }
 
 // Handle register new task for specific chanel
-func (srv *TaskMux) Handle(chanelName string, handler interface{}) Promise {
+// Task after other task can be defined by "parentTaskName>currentTaskName"
+func (srv *TaskMux) Handle(taskName string, handler interface{}) Promise {
 	if srv.tasks == nil {
 		srv.tasks = map[string]Promise{}
 	}
-	if _, ok := srv.tasks[chanelName]; ok {
-		panic(errors.Wrap(ErrChanelTaken, chanelName))
+	parentTaskName := ""
+	splitName := strings.SplitN(taskName, ">", 2)
+	if len(splitName) > 1 {
+		parentTaskName = splitName[0]
+		taskName = splitName[1]
 	}
-	taskItemValue := newPoromise(srv, nil, chanelName, TaskFrom(handler))
-	srv.tasks[chanelName] = taskItemValue
+	if _, ok := srv.tasks[taskName]; ok {
+		panic(errors.Wrap(ErrChanelTaken, taskName))
+	}
+	taskItemValue := newPoromise(srv, nil, taskName, TaskFrom(handler))
+	srv.tasks[taskName] = taskItemValue
+	if parentTaskName != "" {
+		// Links global event name and the target external one
+		taskItemValue.parent = newPromisVirtual(parentTaskName, taskName)
+		parentTaskName = "@" + parentTaskName
+		srv.hiddenTaskMapping[parentTaskName] = append(srv.hiddenTaskMapping[parentTaskName], taskName)
+	}
 	return taskItemValue
 }
 
@@ -97,7 +115,9 @@ func (srv *TaskMux) Receive(msg Message) error {
 			_ = srv.eventAllocator.Release(event)
 		}()
 	}
-	srv.monitor.receiveEvent(event, err)
+	if srv.cluster != nil {
+		srv.cluster.ReceiveEvent(event, err)
+	}
 	if err != nil {
 		return err
 	}
@@ -131,7 +151,9 @@ func (srv *TaskMux) ExecuteEvent(event Event) error {
 				default:
 					err = fmt.Errorf("%v", err)
 				}
-				srv.monitor.execEvent(isFailover, event, time.Since(startTime), err.(error))
+				if srv.cluster != nil {
+					srv.cluster.ExecEvent(isFailover, event, time.Since(startTime), err.(error))
+				}
 			}
 		}()
 	}
@@ -141,7 +163,9 @@ func (srv *TaskMux) ExecuteEvent(event Event) error {
 
 	// Execute the task
 	err := task.Task().Execute(ctx, event, wrt)
-	srv.monitor.execEvent(isFailover, event, time.Since(startTime), err)
+	if srv.cluster != nil {
+		srv.cluster.ExecEvent(isFailover, event, time.Since(startTime), err)
+	}
 
 	if err != nil {
 		if srv.errorHandler != nil {
@@ -155,13 +179,20 @@ func (srv *TaskMux) ExecuteEvent(event Event) error {
 
 // FinishInit of the task server
 func (srv *TaskMux) FinishInit() error {
-	return srv.monitor.register(srv)
+	if srv.cluster != nil {
+		ctx := srv.mainExecContext
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		return srv.cluster.RegisterApplication(ctx, srv)
+	}
+	return nil
 }
 
 // Close task schedule and all subtasks
 func (srv *TaskMux) Close() error {
-	if srv.monitor != nil {
-		srv.monitor.deregister()
+	if srv.cluster != nil {
+		srv.cluster.UnregisterApplication()
 	}
 	var err multiError
 	if srv == nil || srv.tasks == nil {
@@ -173,6 +204,39 @@ func (srv *TaskMux) Close() error {
 		}
 	}
 	return err.AsError()
+}
+
+// CompleteTasks checks the event complition state
+func (srv *TaskMux) CompleteTasks(event Event) (totalTasks, completedTasks []string) {
+	var tasks map[string][]string
+	if srv.cluster != nil {
+		tasks = srv.cluster.AllTasks()
+	} else {
+		tasks = srv.TaskMap()
+	}
+	doneTasks := append(event.DoneTasks(), event.Name())
+	allPossibleTasks := map[string]bool{}
+	for _, taskName := range doneTasks {
+		for _, name := range tasks[taskName] {
+			allPossibleTasks[name] = true
+		}
+		for _, name := range tasks["@"+taskName] {
+			allPossibleTasks[name] = true
+		}
+		if tasks[taskName] != nil || tasks["@"+taskName] != nil {
+			allPossibleTasks[taskName] = true
+		}
+	}
+	for taskName := range allPossibleTasks {
+		for _, name := range tasks[taskName] {
+			allPossibleTasks[name] = true
+		}
+	}
+	totalTasks = make([]string, 0, len(allPossibleTasks))
+	for tname := range allPossibleTasks {
+		totalTasks = append(totalTasks, tname)
+	}
+	return totalTasks, completedTasks
 }
 
 func (srv *TaskMux) borrowResponseWriter(ctx context.Context, prom Promise, event Event) ResponseWriter {
@@ -194,17 +258,27 @@ func (srv *TaskMux) newExecContext() context.Context {
 }
 
 func (srv *TaskMux) targetEventsAfter(eventName string) []string {
+	if srv.hiddenTaskMapping != nil && len(srv.hiddenTaskMapping[eventName]) > 0 {
+		return srv.hiddenTaskMapping[eventName]
+	}
+	if srv.cluster != nil {
+		return srv.cluster.TargetEventsAfter(eventName)
+	}
 	return nil
 }
 
-// EventMap returns linked list of events
-func (srv *TaskMux) EventMap() map[string][]string {
-	if srv.tasks == nil {
-		return map[string][]string{}
+// TaskMap returns linked list of events
+func (srv *TaskMux) TaskMap() map[string][]string {
+	mp := make(map[string][]string, taskMapSize(srv.tasks)+eventMapSize(srv.hiddenTaskMapping))
+	if srv.tasks != nil {
+		for eventName, promiseObject := range srv.tasks {
+			mp[eventName] = mergeStrArr(mp[eventName], promiseObject.TargetEventName())
+		}
 	}
-	mp := make(map[string][]string, len(srv.tasks))
-	for eventName, promiseObject := range srv.tasks {
-		mp[eventName] = promiseObject.TargetEventName()
+	if srv.hiddenTaskMapping != nil {
+		for eventName, targetEvent := range srv.hiddenTaskMapping {
+			mp[eventName] = mergeStrArr(mp[eventName], targetEvent)
+		}
 	}
 	return mp
 }

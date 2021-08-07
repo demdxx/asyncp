@@ -3,7 +3,6 @@ package asyncp
 import (
 	"context"
 	"log"
-	"net"
 	"os"
 	"sync"
 	"time"
@@ -49,8 +48,18 @@ func ClusterWithStores(stores ...monitor.MetricUpdater) ClusterOption {
 	}
 }
 
+// ClusterExt extends functionality of mux
+type ClusterExt interface {
+	RegisterApplication(ctx context.Context, mux *TaskMux) error
+	UnregisterApplication() error
+	ReceiveEvent(event Event, err error) error
+	ExecEvent(failover bool, event Event, execTime time.Duration, err error) error
+	TargetEventsAfter(eventName string) []string
+	AllTasks() map[string][]string
+}
+
 // Cluster provides synchronization of several processing pools
-// and join all processing graphs in one cross-service execution map
+// and join all processing graphs in one cross-service execution map.
 type Cluster struct {
 	mx sync.RWMutex
 
@@ -66,6 +75,7 @@ type Cluster struct {
 	clusterStores []monitor.MetricUpdater
 
 	taskMap map[string][]string
+	appInfo *monitor.ApplicationInfo
 
 	mux *TaskMux
 }
@@ -83,19 +93,19 @@ func NewCluster(appName string, options ...ClusterOption) *Cluster {
 		cluster.syncInterval = clusterDefaultSyncInterval
 	}
 	if cluster.hostIP == "" {
-		cluster.hostIP = getLocalIP()
+		cluster.hostIP = localIP()
 	}
 	if cluster.hostname == "" {
 		cluster.hostname, _ = os.Hostname()
 	}
-	if cluster.infoReader == nil {
-		panic("monitor.ClusterInfoReader is required for synchronisation")
+	if cluster.infoReader == nil && len(cluster.clusterStores) == 0 {
+		panic("monitor.ClusterInfoReader or monitor.MetricUpdater is required for synchronisation")
 	}
 	return cluster
 }
 
 // RegisterApplication in iternal storages
-func (cluster *Cluster) RegisterApplication(mux *TaskMux) (err error) {
+func (cluster *Cluster) RegisterApplication(ctx context.Context, mux *TaskMux) (err error) {
 	if cluster == nil {
 		return nil
 	}
@@ -104,13 +114,14 @@ func (cluster *Cluster) RegisterApplication(mux *TaskMux) (err error) {
 		Name:     cluster.appName,
 		Host:     cluster.hostIP,
 		Hostname: cluster.hostname,
-		Tasks:    mux.EventMap(),
+		Tasks:    mux.TaskMap(),
 	}
 	for _, up := range cluster.clusterStores {
 		if regErr := up.RegisterApplication(appInfo); regErr != nil {
 			err = multierr.Append(err, regErr)
 		}
 	}
+	go cluster.RunSync(ctx)
 	return err
 }
 
@@ -122,6 +133,7 @@ func (cluster *Cluster) UnregisterApplication() (err error) {
 	for _, st := range cluster.clusterStores {
 		err = multierr.Append(err, st.DeregisterApplication())
 	}
+	cluster.StopSync()
 	return err
 }
 
@@ -175,8 +187,20 @@ func (cluster *Cluster) TargetEventsAfter(eventName string) []string {
 	return cluster.taskMap[eventName]
 }
 
+// AllTasks returns all events and links
+func (cluster *Cluster) AllTasks() map[string][]string {
+	if cluster.appInfo == nil {
+		return map[string][]string{}
+	}
+	return cluster.appInfo.Tasks
+}
+
 // RunSync of cluster information
 func (cluster *Cluster) RunSync(ctx context.Context) {
+	if cluster.infoReader == nil {
+		return
+	}
+
 	cluster.StopSync()
 	defer cluster.StopSync()
 
@@ -215,27 +239,11 @@ func (cluster *Cluster) SyncInfo() error {
 	if err != nil {
 		return err
 	}
+	cluster.appInfo = appInfo
 	if appInfo.Tasks != nil {
 		cluster.mx.Lock()
 		defer cluster.mx.Unlock()
 		cluster.taskMap = appInfo.Tasks
 	}
 	return nil
-}
-
-// getLocalIP returns the non loopback local IP of the host
-func getLocalIP() string {
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		return ""
-	}
-	for _, address := range addrs {
-		// check the address type and if it is not a loopback the display it
-		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				return ipnet.IP.String()
-			}
-		}
-	}
-	return ""
 }
