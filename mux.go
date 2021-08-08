@@ -116,7 +116,7 @@ func (srv *TaskMux) Receive(msg Message) error {
 		}()
 	}
 	if srv.cluster != nil {
-		srv.cluster.ReceiveEvent(event, err)
+		_ = srv.cluster.ReceiveEvent(event, err)
 	}
 	if err != nil {
 		return err
@@ -152,7 +152,7 @@ func (srv *TaskMux) ExecuteEvent(event Event) error {
 					err = fmt.Errorf("%v", err)
 				}
 				if srv.cluster != nil {
-					srv.cluster.ExecEvent(isFailover, event, time.Since(startTime), err.(error))
+					_ = srv.cluster.ExecEvent(isFailover, event, time.Since(startTime), err.(error))
 				}
 			}
 		}()
@@ -164,7 +164,7 @@ func (srv *TaskMux) ExecuteEvent(event Event) error {
 	// Execute the task
 	err := task.Task().Execute(ctx, event, wrt)
 	if srv.cluster != nil {
-		srv.cluster.ExecEvent(isFailover, event, time.Since(startTime), err)
+		_ = srv.cluster.ExecEvent(isFailover, event, time.Since(startTime), err)
 	}
 
 	if err != nil {
@@ -192,7 +192,7 @@ func (srv *TaskMux) FinishInit() error {
 // Close task schedule and all subtasks
 func (srv *TaskMux) Close() error {
 	if srv.cluster != nil {
-		srv.cluster.UnregisterApplication()
+		_ = srv.cluster.UnregisterApplication()
 	}
 	var err multiError
 	if srv == nil || srv.tasks == nil {
