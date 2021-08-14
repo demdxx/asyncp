@@ -143,9 +143,9 @@ func updateInfo(iter int, textView *tview.TextView, info monitor.ClusterInfoRead
 		}
 	}
 
-	sort.Slice(data, func(i, j int) bool {
-		return data[i][0] < data[j][0]
-	})
+	if len(data) > 1 {
+		sort.Slice(data, func(i, j int) bool { return data[i][0] < data[j][0] })
+	}
 
 	indicatror := ":"
 	if iter%2 == 0 {

@@ -109,14 +109,17 @@ func (prom *promise) Parent() Promise {
 	return prom.parent
 }
 
-func (prom *promise) Origin() (Promise, int) {
+func (prom *promise) Origin(novirtual ...bool) (Promise, int) {
 	depth := 0
 	p := prom.Parent()
 	if p != nil {
+		if p.IsVirtual() {
+			return nil, 0
+		}
 		for {
 			depth++
 			pr := p.Parent()
-			if pr == nil {
+			if pr == nil || pr.IsVirtual() {
 				break
 			}
 			p = pr
