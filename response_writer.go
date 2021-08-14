@@ -80,6 +80,7 @@ func (wr *responseProxyWriter) writeResonseWithEventName(name string, value inte
 	} else {
 		ev = ev.After(wr.event)
 	}
+	ev.SetMux(wr.mux)
 	return wr.mux.ExecuteEvent(ev)
 }
 

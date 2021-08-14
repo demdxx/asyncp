@@ -140,6 +140,8 @@ func (srv *TaskMux) ExecuteEvent(event Event) error {
 	}
 
 	startTime := time.Now()
+	event.SetPromise(task)
+	event.SetMux(srv)
 
 	// process task panics
 	if srv.panicHandler != nil {

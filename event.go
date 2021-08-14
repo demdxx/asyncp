@@ -35,6 +35,12 @@ type Event interface {
 	// SetMux set new mux object
 	SetMux(*TaskMux)
 
+	// Mux returns origin promise object
+	Promise() Promise
+
+	// Promise set origin promise object
+	SetPromise(Promise)
+
 	// WithName returns new event with new name and current payload and error
 	WithName(name string) Event
 
@@ -79,6 +85,7 @@ type event struct {
 	name             string
 	doneEvents       []string
 	mux              *TaskMux
+	promise          Promise
 	payload          Payload
 	sendCount        int
 	retranslateCount int
@@ -104,6 +111,7 @@ func WithPayload(eventName string, data interface{}) Event {
 		name:             eventName,
 		doneEvents:       nil,
 		mux:              nil,
+		promise:          nil,
 		payload:          payload,
 		sendCount:        0,
 		retranslateCount: 0,
@@ -125,6 +133,7 @@ func (ev *event) Copy() *event {
 		name:             ev.name,
 		doneEvents:       append(make([]string, 0, len(ev.doneEvents)), ev.doneEvents...),
 		mux:              ev.mux,
+		promise:          ev.promise,
 		payload:          ev.payload,
 		sendCount:        ev.sendCount,
 		retranslateCount: ev.retranslateCount,
@@ -166,6 +175,16 @@ func (ev *event) Mux() *TaskMux {
 // SetMux set new mux object
 func (ev *event) SetMux(mux *TaskMux) {
 	ev.mux = mux
+}
+
+// Mux returns origin promise object
+func (ev *event) Promise() Promise {
+	return ev.promise
+}
+
+// Promise set origin promise object
+func (ev *event) SetPromise(p Promise) {
+	ev.promise = p
 }
 
 // WithName returns new event object with new name
