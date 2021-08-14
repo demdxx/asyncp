@@ -29,6 +29,7 @@ mon-build: ## Build monitor application
 mon-build-docker: mon-build ## Build monitor docker service
 	echo "Build monitor docker image"
 	docker build -t ${DOCKER_CONTAINER_IMAGE} -f docker/monitor.dockerfile .
+	docker push ${DOCKER_CONTAINER_IMAGE}
 
 .PHONY: run-monitor-test
 run-monitor-test:

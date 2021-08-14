@@ -24,6 +24,7 @@ func Retranslator(pubs ...Publisher) Task {
 type publisherEventWrapper struct {
 	name string
 	pub  Publisher
+	mux  *TaskMux
 }
 
 // PublisherEventWrapper with fixed event name
@@ -34,10 +35,16 @@ func PublisherEventWrapper(eventName string, publisher Publisher) Publisher {
 	}
 }
 
+func (wr *publisherEventWrapper) SetMux(mux *TaskMux) {
+	wr.mux = mux
+}
+
 func (wr *publisherEventWrapper) Publish(ctx context.Context, messages ...interface{}) error {
 	events := make([]interface{}, 0, len(messages))
 	for _, msg := range messages {
-		events = append(events, WithPayload(wr.name, msg))
+		event := WithPayload(wr.name, msg)
+		event.SetMux(wr.mux)
+		events = append(events, event)
 	}
 	return wr.pub.Publish(ctx, events...)
 }

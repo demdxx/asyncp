@@ -96,6 +96,7 @@ type responseStreamWriter struct {
 	promise Promise
 	wstream Publisher
 	pool    responseWriterRelseasePool
+	mux     *TaskMux
 }
 
 func (wr *responseStreamWriter) WriteResonse(value interface{}) error {
@@ -132,6 +133,7 @@ func (wr *responseStreamWriter) writeResonseWithEventName(name string, value int
 	} else {
 		ev = ev.After(wr.event)
 	}
+	ev.SetMux(wr.mux)
 	return wr.wstream.Publish(wr.getExecContext(), ev)
 }
 

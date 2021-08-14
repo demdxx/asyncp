@@ -19,6 +19,7 @@ type ResponseWriterFactory interface {
 type streamResponseFactory struct {
 	pool      sync.Pool
 	publisher Publisher
+	mux       *TaskMux
 }
 
 // NewStreamResponseFactory returns
@@ -31,12 +32,17 @@ func NewStreamResponseFactory(publisher Publisher) ResponseWriterFactory {
 	}
 }
 
+func (s *streamResponseFactory) SetMux(mux *TaskMux) {
+	s.mux = mux
+}
+
 func (s *streamResponseFactory) Borrow(ctx context.Context, promise Promise, event Event) ResponseWriter {
 	wr := s.pool.Get().(*responseStreamWriter)
 	wr.ctx = ctx
 	wr.event = event
 	wr.promise = promise
 	wr.wstream = s.publisher
+	wr.mux = s.mux
 	wr.pool = s
 	return wr
 }
@@ -50,6 +56,7 @@ func (s *streamResponseFactory) Release(w ResponseWriter) {
 		wr.event = nil
 		wr.wstream = nil
 		wr.pool = nil
+		wr.mux = nil
 		s.pool.Put(wr)
 	}
 }
@@ -89,6 +96,7 @@ func (s *proxyResponseFactory) Release(w ResponseWriter) {
 		wr.promise = nil
 		wr.event = nil
 		wr.pool = nil
+		wr.mux = nil
 		s.pool.Put(wr)
 	}
 }
@@ -119,6 +127,7 @@ func (it *multistreamItem) test(eventName string) bool {
 type mutistreamResponseFactory struct {
 	pool       sync.Pool
 	publishers []*multistreamItem
+	mux        *TaskMux
 }
 
 // NewMultistreamResponseFactory returns implementation with multipublisher support
@@ -170,11 +179,16 @@ func NewMultistreamResponseFactory(streams ...interface{}) ResponseWriterFactory
 	}
 }
 
+func (s *mutistreamResponseFactory) SetMux(mux *TaskMux) {
+	s.mux = mux
+}
+
 func (s *mutistreamResponseFactory) Borrow(ctx context.Context, promise Promise, event Event) ResponseWriter {
 	wr := s.pool.Get().(*responseStreamWriter)
 	wr.event = event
 	wr.promise = promise
 	wr.wstream = s.publisher(event)
+	wr.mux = s.mux
 	wr.pool = s
 	return wr
 }
@@ -187,6 +201,7 @@ func (s *mutistreamResponseFactory) Release(w ResponseWriter) {
 		wr.event = nil
 		wr.wstream = nil
 		wr.pool = nil
+		wr.mux = nil
 		s.pool.Put(wr)
 	}
 }

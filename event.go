@@ -29,6 +29,12 @@ type Event interface {
 	// CreatedAt returns the date of the event generation
 	CreatedAt() time.Time
 
+	// Mux returns base executer server
+	Mux() *TaskMux
+
+	// SetMux set new mux object
+	SetMux(*TaskMux)
+
 	// WithName returns new event with new name and current payload and error
 	WithName(name string) Event
 
@@ -72,6 +78,7 @@ type event struct {
 	id               uuid.UUID
 	name             string
 	doneEvents       []string
+	mux              *TaskMux
 	payload          Payload
 	sendCount        int
 	retranslateCount int
@@ -96,6 +103,7 @@ func WithPayload(eventName string, data interface{}) Event {
 		id:               id,
 		name:             eventName,
 		doneEvents:       nil,
+		mux:              nil,
 		payload:          payload,
 		sendCount:        0,
 		retranslateCount: 0,
@@ -116,6 +124,7 @@ func (ev *event) Copy() *event {
 		id:               ev.id,
 		name:             ev.name,
 		doneEvents:       append(make([]string, 0, len(ev.doneEvents)), ev.doneEvents...),
+		mux:              ev.mux,
 		payload:          ev.payload,
 		sendCount:        ev.sendCount,
 		retranslateCount: ev.retranslateCount,
@@ -147,6 +156,16 @@ func (ev *event) Err() error {
 // CreatedAt returns the date of the event generation
 func (ev *event) CreatedAt() time.Time {
 	return ev.createdAt
+}
+
+// Mux returns base executer server
+func (ev *event) Mux() *TaskMux {
+	return ev.mux
+}
+
+// SetMux set new mux object
+func (ev *event) SetMux(mux *TaskMux) {
+	ev.mux = mux
 }
 
 // WithName returns new event object with new name
