@@ -17,7 +17,7 @@ func TestTask(t *testing.T) {
 			if err := event.Payload().Decode(&i); err != nil {
 				return err
 			}
-			if i == 2 {
+			if i >= 2 {
 				return rw.WriteResonse(i + 1)
 			}
 			return rw.RepeatWithResponse(i + 1)

@@ -72,7 +72,7 @@ func (wr *responseProxyWriter) writeResonseWithEventName(name string, value inte
 	default:
 		ev = wr.event.WithPayload(value)
 	}
-	if ev.IsComplete() {
+	if name != "" || !repeat {
 		ev = ev.WithName(name)
 	}
 	if repeat {
@@ -126,7 +126,7 @@ func (wr *responseStreamWriter) writeResonseWithEventName(name string, value int
 	default:
 		ev = wr.event.WithPayload(value)
 	}
-	if ev.IsComplete() {
+	if name != "" || !repeat {
 		ev = ev.WithName(name)
 	}
 	if repeat {

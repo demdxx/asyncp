@@ -80,7 +80,7 @@ type Event interface {
 
 // event structure with basic implementation of event interface
 type event struct {
-	notComplete      bool
+	complete         bool
 	id               uuid.UUID
 	name             string
 	doneEvents       []string
@@ -107,6 +107,7 @@ func WithPayload(eventName string, data interface{}) Event {
 		}
 	}
 	return &event{
+		complete:         false,
 		id:               id,
 		name:             eventName,
 		doneEvents:       nil,
@@ -128,7 +129,7 @@ func (ev *event) String() string {
 // Copy event object
 func (ev *event) Copy() *event {
 	return &event{
-		notComplete:      ev.notComplete,
+		complete:         ev.complete,
 		id:               ev.id,
 		name:             ev.name,
 		doneEvents:       append(make([]string, 0, len(ev.doneEvents)), ev.doneEvents...),
@@ -247,12 +248,12 @@ func (ev *event) WithError(err error) Event {
 
 // SetComplete marks event as complited or no
 func (ev *event) SetComplete(b bool) {
-	ev.notComplete = !b
+	ev.complete = b
 }
 
 // IsComplete returns marker of event completion
 func (ev *event) IsComplete() bool {
-	return !ev.notComplete
+	return ev.complete
 }
 
 // DoneTasks returns the list of previous event names
