@@ -56,6 +56,7 @@ type ClusterExt interface {
 	ExecEvent(failover bool, event Event, execTime time.Duration, err error) error
 	TargetEventsAfter(eventName string) []string
 	AllTasks() map[string][]string
+	AllTaskChains() map[string][]string
 }
 
 // Cluster provides synchronization of several processing pools
