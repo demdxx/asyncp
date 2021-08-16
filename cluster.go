@@ -195,6 +195,35 @@ func (cluster *Cluster) AllTasks() map[string][]string {
 	return cluster.appInfo.Tasks
 }
 
+// AllTaskChains returns all events task chains
+func (cluster *Cluster) AllTaskChains() map[string][]string {
+	var (
+		tasks       = cluster.AllTasks()
+		chains      = map[string][]string{}
+		canContinue = true
+	)
+	for k, v := range tasks {
+		chains[k] = append(make([]string, 0, len(v)), v...)
+	}
+mainLoop:
+	for canContinue && len(chains) > 0 {
+		for k, v := range chains {
+			canContinue = false
+			for _, key := range v {
+				if len(chains[key]) > 0 {
+					chains[k] = append(v, chains[key]...)
+					canContinue = true
+				}
+				delete(chains, key)
+			}
+			if canContinue {
+				continue mainLoop
+			}
+		}
+	}
+	return chains
+}
+
 // RunSync of cluster information
 func (cluster *Cluster) RunSync(ctx context.Context) {
 	if cluster.infoReader == nil {
