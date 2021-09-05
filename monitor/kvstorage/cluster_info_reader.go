@@ -13,7 +13,7 @@ import (
 
 // ClusterInfoReader overrides group node accessing
 type ClusterInfoReader struct {
-	mx sync.Mutex
+	mx sync.RWMutex
 
 	appName  []string
 	kvclient KeyValueAccessor
@@ -38,6 +38,8 @@ func (s *ClusterInfoReader) ApplicationInfo() (*monitor.ApplicationInfo, error) 
 	if err != nil {
 		return nil, err
 	}
+	s.mx.RLock()
+	defer s.mx.RUnlock()
 	var appInfo monitor.ApplicationInfo
 	for _, storage := range storageList {
 		appInfo.Merge(storage.ApplicationInfo())
@@ -51,6 +53,8 @@ func (s *ClusterInfoReader) TaskInfo(name string) (*monitor.TaskInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+	s.mx.RLock()
+	defer s.mx.RUnlock()
 	var taskInfo monitor.TaskInfo
 	for _, storage := range storageList {
 		info, err := storage.TaskInfo(name)
@@ -68,6 +72,8 @@ func (s *ClusterInfoReader) TaskInfoByID(id string) (*monitor.TaskInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+	s.mx.RLock()
+	defer s.mx.RUnlock()
 	var taskInfo monitor.TaskInfo
 	for _, storage := range storageList {
 		info, err := storage.TaskInfoByID(id)
@@ -127,5 +133,7 @@ func (s *ClusterInfoReader) ListStorages() ([]*Storage, error) {
 
 // ResetCache of the nodes
 func (s *ClusterInfoReader) ResetCache() {
+	s.mx.Lock()
+	defer s.mx.Unlock()
 	s.storageList = s.storageList[:0]
 }
