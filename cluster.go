@@ -265,6 +265,9 @@ func (cluster *Cluster) StopSync() {
 
 // SyncInfo of the cluster
 func (cluster *Cluster) SyncInfo() error {
+	if cluster.infoReader == nil {
+		return nil
+	}
 	appInfo, err := cluster.infoReader.ApplicationInfo()
 	if err != nil {
 		return err
@@ -273,7 +276,12 @@ func (cluster *Cluster) SyncInfo() error {
 	if appInfo.Tasks != nil {
 		cluster.mx.Lock()
 		defer cluster.mx.Unlock()
-		cluster.taskMap = appInfo.Tasks
+		cluster.taskMap = map[string][]string{}
+		if appInfo.Tasks != nil {
+			for k, v := range appInfo.Tasks {
+				cluster.taskMap[k] = append([]string{}, v...)
+			}
+		}
 	}
 	return nil
 }

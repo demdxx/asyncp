@@ -113,6 +113,11 @@ func (srv *TaskMux) Receive(msg Message) error {
 	if err != nil {
 		defer func() {
 			_ = srv.eventAllocator.Release(event)
+			if srv.panicHandler != nil {
+				if err := recover(); err != nil {
+					srv.panicHandler(nil, event, err)
+				}
+			}
 		}()
 	}
 	if srv.cluster != nil {
