@@ -5,6 +5,7 @@ BUILD_CGO_ENABLED ?= 0
 DOCKER_COMPOSE := docker-compose -f example/docker-compose.yml
 DOCKER_CONTAINER_IMAGE="demdxx/asyncp-monitor:latest"
 GO111MODULE := on
+DOCKER_BUILDKIT := 1
 
 .PHONY: test
 test: ## Run unit tests
@@ -18,18 +19,29 @@ tidy: ## Apply tidy to the module
 lint:
 	GL_DEBUG=true golangci-lint run -v ./...
 
+OS_LIST = linux darwin
+ARCH_LIST = amd64 arm64
+
 .PHONY: mon-build
 mon-build: ## Build monitor application
 	@echo "Build monitor application"
 	@rm -rf .build/apmonitor
-	GOOS=${BUILD_GOOS} GOARCH=${BUILD_GOARCH} CGO_ENABLED=${BUILD_CGO_ENABLED} \
-		go build -o .build/apmonitor cmd/apmonitor/main.go
+	for os in $(OS_LIST); do \
+		for arch in $(ARCH_LIST); do \
+			echo "Build $$os/$$arch"; \
+			GOOS=$$os GOARCH=$$arch CGO_ENABLED=${BUILD_CGO_ENABLED} \
+				go build -o .build/$$os/$$arch/apmonitor cmd/apmonitor/main.go; \
+		done \
+	done
 
 .PHONY: mon-build-docker
 mon-build-docker: mon-build ## Build monitor docker service
 	echo "Build monitor docker image"
-	docker build -t ${DOCKER_CONTAINER_IMAGE} -f docker/monitor.dockerfile .
-	docker push ${DOCKER_CONTAINER_IMAGE}
+	# --cache-from type=local,dest=/tmp/docker-cache
+	# --cache-to   type=local,dest=/tmp/docker-cache,mode=max
+	DOCKER_BUILDKIT=${DOCKER_BUILDKIT} docker buildx build \
+		--push --platform linux/amd64,linux/arm64,darwin/amd64,darwin/arm64 \
+		-t ${DOCKER_CONTAINER_IMAGE} -f docker/monitor.dockerfile .
 
 .PHONY: run-monitor-test
 run-monitor-test:

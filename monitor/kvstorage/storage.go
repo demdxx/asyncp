@@ -49,6 +49,7 @@ func newWithApplication(client KeyValueAccessor, name, host string) (*Storage, e
 	storage := &Storage{
 		client:   client,
 		taskInfo: map[string]*monitor.TaskInfo{},
+		appInfo:  &monitor.ApplicationInfo{},
 	}
 	if _, err := storage.loadApplicationInfo(name, host); err != nil {
 		return nil, err

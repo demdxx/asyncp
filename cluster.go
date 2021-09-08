@@ -272,15 +272,14 @@ func (cluster *Cluster) SyncInfo() error {
 	if err != nil {
 		return err
 	}
-	cluster.appInfo = appInfo
+	cluster.appInfo = &monitor.ApplicationInfo{}
+	cluster.appInfo.Merge(appInfo)
 	if appInfo.Tasks != nil {
 		cluster.mx.Lock()
 		defer cluster.mx.Unlock()
 		cluster.taskMap = map[string][]string{}
-		if appInfo.Tasks != nil {
-			for k, v := range appInfo.Tasks {
-				cluster.taskMap[k] = append([]string{}, v...)
-			}
+		for k, v := range cluster.appInfo.Tasks {
+			cluster.taskMap[k] = append([]string{}, v...)
 		}
 	}
 	return nil

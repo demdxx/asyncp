@@ -32,10 +32,14 @@ func NewClusterInfoReader(kvclient KeyValueAccessor, appName ...string) *Cluster
 	}
 }
 
+func (s *ClusterInfoReader) String() string {
+	return "Cluster: " + strings.Join(s.appName, ",")
+}
+
 // ApplicationInfo returns application information
 func (s *ClusterInfoReader) ApplicationInfo() (*monitor.ApplicationInfo, error) {
 	storageList, err := s.ListStorages()
-	if err != nil {
+	if err != nil || len(storageList) == 0 {
 		return nil, err
 	}
 	s.mx.RLock()
@@ -106,6 +110,9 @@ func (s *ClusterInfoReader) ListOfNodes() (map[string][]string, int, error) {
 
 // ListStorages returns the list of redis storages
 func (s *ClusterInfoReader) ListStorages() ([]*Storage, error) {
+	if s == nil {
+		return nil, nil
+	}
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	if len(s.storageList) > 0 && time.Since(s.lastUpdated) <= s.cacheLifetime {

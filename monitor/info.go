@@ -24,7 +24,7 @@ func (app *ApplicationInfo) Merge(info *ApplicationInfo) {
 			app.Tasks = make(map[string][]string, len(info.Tasks))
 		}
 		for taskName, taskTarget := range info.Tasks {
-			app.Tasks[taskName] = taskTarget
+			app.Tasks[taskName] = append([]string{}, taskTarget...)
 		}
 	}
 }
