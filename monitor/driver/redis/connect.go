@@ -9,16 +9,11 @@ import (
 )
 
 func connectRedis(connectURL string) (redis.Cmdable, error) {
-	var (
-		urlHost, err = url.Parse(connectURL)
-		password     string
-	)
+	urlHost, err := url.Parse(connectURL)
 	if err != nil {
 		return nil, err
 	}
-	if urlHost.User != nil {
-		password, _ = urlHost.User.Password()
-	}
+	password, _ := urlHost.User.Password()
 	redisClient := redis.NewClient(&redis.Options{
 		DB:           gocast.ToInt(strings.Trim(urlHost.Path, `/`)),
 		Addr:         urlHost.Host,

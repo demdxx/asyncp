@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/url"
@@ -49,7 +48,6 @@ func main() {
 		},
 		Action: runMonitor,
 	}
-
 	err := app.Run(os.Args)
 	if err != nil {
 		log.Fatal(err)
@@ -66,9 +64,6 @@ func runMonitor(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	iter := 0
 	ticker := time.NewTicker(interval)
 	app := tview.NewApplication()
@@ -81,7 +76,7 @@ func runMonitor(c *cli.Context) error {
 	go func() {
 		for {
 			select {
-			case <-ctx.Done():
+			case <-c.Context.Done():
 				ticker.Stop()
 				return
 			case <-ticker.C:
@@ -130,14 +125,15 @@ func updateInfo(iter int, textView *tview.TextView, info monitor.ClusterInfoRead
 				continue
 			}
 			taskInfo, _ := info.TaskInfo(taskName)
-			item := []string{taskName, "?", "?", "?", "?", "?", "?"}
+			item := []string{taskName, "?", "?", "?", "?", "?", "?", "?"}
 			if taskInfo != nil {
 				item[1] = taskInfo.MinExecTime.String()
 				item[2] = taskInfo.MaxExecTime.String()
 				item[3] = taskInfo.AvgExecTime.String()
 				item[4] = gocast.ToString(taskInfo.SuccessCount)
-				item[5] = gocast.ToString(taskInfo.ErrorCount)
-				item[6] = gocast.ToString(taskInfo.TotalCount)
+				item[5] = gocast.ToString(taskInfo.SkipCount)
+				item[6] = gocast.ToString(taskInfo.ErrorCount)
+				item[7] = gocast.ToString(taskInfo.TotalCount)
 			}
 			data = append(data, item)
 		}
@@ -152,8 +148,8 @@ func updateInfo(iter int, textView *tview.TextView, info monitor.ClusterInfoRead
 		indicatror = " "
 	}
 	table := tablewriter.NewWriter(textView)
-	table.SetHeader([]string{"task", "min", "max", "avg", "success", "error", "total"})
-	table.SetFooter([]string{"", "", "", "", "", "Nodes" + indicatror, gocast.ToString(nodeCount)})
+	table.SetHeader([]string{"task", "min", "max", "avg", "success", "skip", "error", "total"})
+	table.SetFooter([]string{"", "", "", "", "", "", "Nodes" + indicatror, gocast.ToString(nodeCount)})
 	table.SetAutoWrapText(false)
 	table.SetAutoFormatHeaders(true)
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)

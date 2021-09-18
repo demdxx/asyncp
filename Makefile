@@ -43,6 +43,13 @@ mon-build-docker: mon-build ## Build monitor docker service
 		--push --platform linux/amd64,linux/arm64,darwin/amd64,darwin/arm64 \
 		-t ${DOCKER_CONTAINER_IMAGE} -f docker/monitor.dockerfile .
 
+mon-build-docker-dev:
+	echo "Build monitor docker image for dev"
+	GOOS=${BUILD_GOOS} GOARCH=${BUILD_GOARCH} CGO_ENABLED=${BUILD_CGO_ENABLED} \
+		go build -o .build/apmonitor cmd/apmonitor/main.go
+	DOCKER_BUILDKIT=${DOCKER_BUILDKIT} docker build \
+		-t ${DOCKER_CONTAINER_IMAGE} -f docker/monitor-dev.dockerfile .
+
 .PHONY: run-monitor-test
 run-monitor-test:
 	rm -fR .build/

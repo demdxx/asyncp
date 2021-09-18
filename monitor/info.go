@@ -1,6 +1,9 @@
 package monitor
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 // ApplicationInfo with basic description
 type ApplicationInfo struct {
@@ -34,6 +37,7 @@ type TaskInfo struct {
 	TotalCount   uint64        `json:"total_count"`
 	ErrorCount   uint64        `json:"error_count"`
 	SuccessCount uint64        `json:"success_count"`
+	SkipCount    uint64        `json:"skip_count"`
 	MinExecTime  time.Duration `json:"min_exec_time"`
 	AvgExecTime  time.Duration `json:"avg_exec_time"`
 	MaxExecTime  time.Duration `json:"max_exec_time"`
@@ -45,7 +49,11 @@ type TaskInfo struct {
 func (task *TaskInfo) Inc(err error, execTime time.Duration) {
 	task.TotalCount++
 	if err != nil {
-		task.ErrorCount++
+		if strings.Contains(err.Error(), "skip event") {
+			task.SkipCount++
+		} else {
+			task.ErrorCount++
+		}
 	} else {
 		task.SuccessCount++
 	}
@@ -71,6 +79,7 @@ func (task *TaskInfo) Add(info *TaskInfo) {
 	task.TotalCount += info.TotalCount
 	task.ErrorCount += info.ErrorCount
 	task.SuccessCount += info.SuccessCount
+	task.SkipCount += info.SkipCount
 	if task.MinExecTime == 0 || task.MinExecTime > info.MinExecTime {
 		task.MinExecTime = info.MinExecTime
 	}
