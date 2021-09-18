@@ -34,6 +34,23 @@ func Retranslator(repeatMaxCount int, pubs ...Publisher) Task {
 	})
 }
 
+// Repeater send same event to the same set of pipelines
+func Repeater(repeatMaxCount ...int) Task {
+	maxRepears := DefaultRetranslateCount
+	if len(repeatMaxCount) > 0 && repeatMaxCount[0] > 0 {
+		maxRepears = repeatMaxCount[0]
+	}
+	return FuncTask(func(ctx context.Context, event Event, responseWriter ResponseWriter) error {
+		if event.Name() == "" {
+			return nil
+		}
+		if _, repeats := event.Counters(); repeats > maxRepears {
+			return responseWriter.WriteResonse(event.WithError(ErrSkipEvent))
+		}
+		return responseWriter.RepeatWithResponse(event)
+	})
+}
+
 type publisherEventWrapper struct {
 	name string
 	pub  Publisher
