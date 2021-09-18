@@ -2,6 +2,7 @@ package asyncp
 
 import (
 	"context"
+	"errors"
 	"log"
 	"os"
 	"sync"
@@ -14,6 +15,11 @@ import (
 
 const (
 	clusterDefaultSyncInterval = time.Second * 10
+)
+
+var (
+	// ErrNoSyncInformation in case if cant get access to sync information
+	ErrNoSyncInformation = errors.New("no information for sync")
 )
 
 // ClusterOption provides option extractor for the cluster configuration
@@ -273,6 +279,9 @@ func (cluster *Cluster) SyncInfo() error {
 		return err
 	}
 	cluster.appInfo = &monitor.ApplicationInfo{}
+	if appInfo == nil {
+		return ErrNoSyncInformation
+	}
 	cluster.appInfo.Merge(appInfo)
 	if appInfo.Tasks != nil {
 		cluster.mx.Lock()
