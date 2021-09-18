@@ -46,7 +46,9 @@ func (s *ClusterInfoReader) ApplicationInfo() (*monitor.ApplicationInfo, error) 
 	defer s.mx.RUnlock()
 	var appInfo monitor.ApplicationInfo
 	for _, storage := range storageList {
-		appInfo.Merge(storage.ApplicationInfo())
+		if storageAppInfo := storage.ApplicationInfo(); storageAppInfo != nil {
+			appInfo.Merge(storageAppInfo)
+		}
 	}
 	return &appInfo, nil
 }
