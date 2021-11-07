@@ -38,7 +38,7 @@ func New(tasks ...interface{}) *Pipeline {
 	)
 	for _, v := range tasks {
 		switch vl := v.(type) {
-		case asyncp.Task:
+		default:
 			if err := pipe.AddTask(name, vl); err != nil {
 				panic(err)
 			}
@@ -48,23 +48,21 @@ func New(tasks ...interface{}) *Pipeline {
 				panic(ErrInvalidInputParamsOrder)
 			}
 			name = vl
-		default:
-			panic(ErrInvalidInputParams)
 		}
 	}
 	return pipe
 }
 
 // AddTask puts new task in the list
-func (p *Pipeline) AddTask(name string, task asyncp.Task) error {
+func (p *Pipeline) AddTask(name string, task interface{}) error {
 	if name != "" {
-		if task, _ := p.TaskByName(name); task != nil {
+		if curTask, _ := p.TaskByName(name); curTask != nil {
 			return errors.Wrap(ErrTaskIsRegistered, name)
 		}
 	} else {
 		name = fmt.Sprintf("task%d", len(p.tasks)+1)
 	}
-	p.tasks = append(p.tasks, &item{name: name, task: task})
+	p.tasks = append(p.tasks, &item{name: name, task: asyncp.TaskFrom(task)})
 	return nil
 }
 

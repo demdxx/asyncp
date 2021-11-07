@@ -9,6 +9,7 @@ import (
 
 	"github.com/geniusrabbit/notificationcenter"
 	"github.com/pkg/errors"
+	"go.uber.org/multierr"
 )
 
 // Error list...
@@ -201,16 +202,16 @@ func (srv *TaskMux) Close() error {
 	if srv.cluster != nil {
 		_ = srv.cluster.UnregisterApplication()
 	}
-	var err multiError
+	var err error
 	if srv == nil || srv.tasks == nil {
 		return nil
 	}
 	for _, promise := range srv.tasks {
 		if closer, ok := promise.(io.Closer); ok {
-			err.Add(closer.Close())
+			err = multierr.Append(err, closer.Close())
 		}
 	}
-	return err.AsError()
+	return err
 }
 
 // CompleteTasks checks the event complition state

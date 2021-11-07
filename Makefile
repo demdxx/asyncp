@@ -1,5 +1,6 @@
-BUILD_GOOS ?= linux
-BUILD_GOARCH ?= amd64
+BUILD_GOOS ?= $(or ${DOCKER_DEFAULT_GOOS},linux)
+BUILD_GOARCH ?= $(or ${DOCKER_DEFAULT_GOARCH},amd64)
+BUILD_GOARM ?= 7
 BUILD_CGO_ENABLED ?= 0
 
 DOCKER_COMPOSE := docker-compose -f example/docker-compose.yml
@@ -20,7 +21,7 @@ lint:
 	GL_DEBUG=true golangci-lint run -v ./...
 
 OS_LIST = linux darwin
-ARCH_LIST = amd64 arm64
+ARCH_LIST = amd64 arm64 arm
 
 .PHONY: mon-build
 mon-build: ## Build monitor application
@@ -45,7 +46,7 @@ mon-build-docker: mon-build ## Build monitor docker service
 
 mon-build-docker-dev:
 	echo "Build monitor docker image for dev"
-	GOOS=${BUILD_GOOS} GOARCH=${BUILD_GOARCH} CGO_ENABLED=${BUILD_CGO_ENABLED} \
+	GOOS=${BUILD_GOOS} GOARCH=${BUILD_GOARCH} CGO_ENABLED=${BUILD_CGO_ENABLED} GOARM=${BUILD_GOARM} \
 		go build -o .build/apmonitor cmd/apmonitor/main.go
 	DOCKER_BUILDKIT=${DOCKER_BUILDKIT} docker build \
 		-t ${DOCKER_CONTAINER_IMAGE} -f docker/monitor-dev.dockerfile .
@@ -55,11 +56,16 @@ run-monitor-test:
 	rm -fR .build/
 	$(DOCKER_COMPOSE) stop
 	$(DOCKER_COMPOSE) rm -f counter
-	GOOS=${BUILD_GOOS} GOARCH=${BUILD_GOARCH} CGO_ENABLED=${BUILD_CGO_ENABLED} \
+	GOOS=${BUILD_GOOS} GOARCH=${BUILD_GOARCH} CGO_ENABLED=${BUILD_CGO_ENABLED} GOARM=${BUILD_GOARM} \
 		go build -o .build/counter example/counter/main.go
-	GOOS=${BUILD_GOOS} GOARCH=${BUILD_GOARCH} CGO_ENABLED=${BUILD_CGO_ENABLED} \
+	GOOS=${BUILD_GOOS} GOARCH=${BUILD_GOARCH} CGO_ENABLED=${BUILD_CGO_ENABLED} GOARM=${BUILD_GOARM} \
 		go build -o .build/apmonitor cmd/apmonitor/main.go
 	$(DOCKER_COMPOSE) run --rm --service-ports apmonitor
+
+.PHONY: fmt
+fmt: ## Run formatting code
+	@echo "Fix formatting"
+	@gofmt -w ${GO_FMT_FLAGS} $$(go list -f "{{ .Dir }}" ./...); if [ "$${errors}" != "" ]; then echo "$${errors}"; fi
 
 .PHONY: docker-stop
 docker-stop:

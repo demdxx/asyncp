@@ -1,6 +1,7 @@
 package asyncp
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 
@@ -42,6 +43,9 @@ func mustMessageFrom(value interface{}) message {
 
 // Unical message ID (depends on transport)
 func (m message) ID() string { return `` }
+
+// Context of the message
+func (m message) Context() context.Context { return context.Background() }
 
 // Body returns message data as bytes
 func (m message) Body() []byte { return []byte(m) }

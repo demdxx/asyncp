@@ -2,6 +2,8 @@ package asyncp
 
 import (
 	"context"
+
+	"go.uber.org/multierr"
 )
 
 type responseWriterRelseasePool interface {
@@ -48,16 +50,16 @@ type responseProxyWriter struct {
 
 func (wr *responseProxyWriter) WriteResonse(value interface{}) error {
 	var (
-		errs   multiError
+		err    error
 		events = wr.promise.TargetEventName()
 	)
 	for _, eventName := range events {
-		errs.Add(wr.writeResonseWithEventName(eventName, value, false))
+		err = multierr.Append(err, wr.writeResonseWithEventName(eventName, value, false))
 	}
 	if len(events) == 0 {
-		errs.Add(wr.writeResonseWithEventName("", value, false))
+		err = multierr.Append(err, wr.writeResonseWithEventName("", value, false))
 	}
-	return errs.AsError()
+	return err
 }
 
 func (wr *responseProxyWriter) RepeatWithResponse(value interface{}) error {
@@ -102,16 +104,16 @@ type responseStreamWriter struct {
 
 func (wr *responseStreamWriter) WriteResonse(value interface{}) error {
 	var (
-		errs   multiError
+		err    error
 		events = wr.promise.TargetEventName()
 	)
 	for _, eventName := range events {
-		errs.Add(wr.writeResonseWithEventName(eventName, value, false))
+		err = multierr.Append(err, wr.writeResonseWithEventName(eventName, value, false))
 	}
 	if len(events) == 0 {
-		errs.Add(wr.writeResonseWithEventName("", value, false))
+		err = multierr.Append(err, wr.writeResonseWithEventName("", value, false))
 	}
-	return errs.AsError()
+	return err
 }
 
 func (wr *responseStreamWriter) RepeatWithResponse(value interface{}) error {

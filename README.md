@@ -42,23 +42,23 @@ func main() {
   defer func() { _ = mx.Close() }()
 
   // Create new task handler to download articles by RSS
-  mx.Handle("rss", asyncp.FuncTask(downloadRSSList)).
-    Then(asyncp.FuncTask(downloadRSSItem)).
-    Then(asyncp.FuncTask(updateRSSArticles))
+  mx.Handle("rss", downloadRSSList).
+    Then(downloadRSSItem).
+    Then(updateRSSArticles)
 
   // Create new task handler to process video files
-  mx.Handle("video", asyncp.FuncTask(loadVideoForProcessing)).
-    Then(asyncp.FuncTask(makeVideoThumbs)).
-    Then(asyncp.FuncTask(convertVideoFormat))
+  mx.Handle("video", loadVideoForProcessing).
+    Then(makeVideoThumbs).
+    Then(convertVideoFormat)
 
   // Send report to user (event contains login and email target)
   mx.Handle("email", pipeline.New(
-    `userinfo`, asyncp.FuncTask(assembleBasicInfo),
-    `changes`, asyncp.FuncTask(assembleAllChangesForUser),
-    `template`, asyncp.FuncTask(assembleEmailHTMLTemplate),
+    `userinfo`, assembleBasicInfo,
+    `changes`, assembleAllChangesForUser,
+    `template`, assembleEmailHTMLTemplate,
     pipeline.New(
-      asyncp.FuncTask(sendNotification),
-      asyncp.FuncTask(sendSendLogs),
+      sendNotification,
+      sendSendLogs,
     ),
   )).Then(sendEmailTask)
 
