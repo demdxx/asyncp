@@ -1,4 +1,5 @@
 //go:build !apnekafka
+// +build !apnekafka
 
 package streams
 

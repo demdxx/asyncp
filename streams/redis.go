@@ -1,4 +1,5 @@
 //go:build !apneredis
+// +build !apneredis
 
 package streams
 

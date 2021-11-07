@@ -1,4 +1,5 @@
 //go:build !apnenats
+// +build !apnenats
 
 package streams
 
