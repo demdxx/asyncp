@@ -19,7 +19,7 @@ type Promise interface {
 	// TargetEvent define
 	TargetEvent(name string) Promise
 
-	// Then execute the next task if current succeded
+	// Then execute the next task if current succeeded
 	Then(handler interface{}) Promise
 
 	// ThenEvent which need to execute

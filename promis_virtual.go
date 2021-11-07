@@ -23,7 +23,7 @@ func (v *promiseVirtual) TargetEvent(name string) Promise {
 	panic("`TargetEvent` defenition is not supported by virtual")
 }
 
-// Then execute the next task if current succeded
+// Then execute the next task if current succeeded
 func (v *promiseVirtual) Then(handler interface{}) Promise {
 	panic("`Then` defenition is not supported by virtual")
 }

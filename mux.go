@@ -214,7 +214,7 @@ func (srv *TaskMux) Close() error {
 	return err
 }
 
-// CompleteTasks checks the event complition state
+// CompleteTasks checks the event completion state
 func (srv *TaskMux) CompleteTasks(event Event) (totalTasks, completedTasks []string) {
 	var tasks map[string][]string
 	if srv.cluster != nil {
