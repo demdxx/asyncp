@@ -101,12 +101,12 @@ func WithMonitorDefaults(appName string, updater ...monitor.MetricUpdater) Optio
 	return WithMonitor(appName, localIP(), hostname, updater...)
 }
 
-// WithCluster set option of the cluster snchronizer
+// WithCluster set option of the cluster synchronizer from options
 func WithCluster(appName string, options ...ClusterOption) Option {
 	return WithClusterObject(NewCluster(appName, options...))
 }
 
-// WithCluster set option of the cluster snchronizer
+// WithClusterObject set option of the cluster synchronizer
 func WithClusterObject(cluster ClusterExt) Option {
 	return func(opt *Options) {
 		opt.Cluster = cluster
