@@ -53,7 +53,7 @@ func (s *ClusterInfoReader) ApplicationInfo() (*monitor.ApplicationInfo, error) 
 	return &appInfo, nil
 }
 
-// TaskInfo retuns information about the task
+// TaskInfo returns information about the task
 func (s *ClusterInfoReader) TaskInfo(name string) (*monitor.TaskInfo, error) {
 	storageList, err := s.ListStorages()
 	if err != nil {
@@ -72,7 +72,7 @@ func (s *ClusterInfoReader) TaskInfo(name string) (*monitor.TaskInfo, error) {
 	return &taskInfo, nil
 }
 
-// TaskInfoByID retuns information about the particular task
+// TaskInfoByID returns information about the particular task
 func (s *ClusterInfoReader) TaskInfoByID(id string) (*monitor.TaskInfo, error) {
 	storageList, err := s.ListStorages()
 	if err != nil {

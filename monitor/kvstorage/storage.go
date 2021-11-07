@@ -100,7 +100,7 @@ func (s *Storage) ReceiveEvent(event monitor.EventType) (err error) {
 	return err
 }
 
-// TaskInfo retuns information about the task
+// TaskInfo returns information about the task
 func (s *Storage) TaskInfo(name string) (*monitor.TaskInfo, error) {
 	s.mx.RLock()
 	taskInfo := s.taskInfo[name]
@@ -188,7 +188,7 @@ func (s *Storage) ExecuteTask(event monitor.EventType, execTime time.Duration) e
 	return tx.Commit()
 }
 
-// FailoverTaskInfo retuns information about the failover task
+// FailoverTaskInfo returns information about the failover task
 func (s *Storage) FailoverTaskInfo(name string) (*monitor.TaskInfo, error) {
 	return s.TaskInfo(failoverTaskName)
 }
