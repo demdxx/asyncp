@@ -26,7 +26,7 @@ type KeyValueBasic interface {
 	Del(key ...string) error
 }
 
-// KeyValueTxAccessor defines accessor which will apply changes only after commiting
+// KeyValueTxAccessor defines accessor which will apply changes only after committing
 type KeyValueTxAccessor interface {
 	KeyValueBasic
 
