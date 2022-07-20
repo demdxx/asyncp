@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/demdxx/asyncp"
+	"github.com/demdxx/asyncp/v2"
 	"github.com/stretchr/testify/assert"
 )
 

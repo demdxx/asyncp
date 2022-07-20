@@ -7,9 +7,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/demdxx/asyncp"
-	nc "github.com/geniusrabbit/notificationcenter"
-	"github.com/geniusrabbit/notificationcenter/gochan"
+	"github.com/demdxx/asyncp/v2"
+	nc "github.com/geniusrabbit/notificationcenter/v2"
+	"github.com/geniusrabbit/notificationcenter/v2/gochan"
 )
 
 type rssItem struct {

@@ -8,13 +8,13 @@ import (
 	"math/rand"
 	"time"
 
-	nc "github.com/geniusrabbit/notificationcenter"
-	"github.com/geniusrabbit/notificationcenter/interval"
+	nc "github.com/geniusrabbit/notificationcenter/v2"
+	"github.com/geniusrabbit/notificationcenter/v2/interval"
 
-	"github.com/demdxx/asyncp"
-	"github.com/demdxx/asyncp/monitor/driver/redis"
-	"github.com/demdxx/asyncp/monitor/kvstorage"
-	"github.com/demdxx/asyncp/streams"
+	"github.com/demdxx/asyncp/v2"
+	"github.com/demdxx/asyncp/v2/monitor/driver/redis"
+	"github.com/demdxx/asyncp/v2/monitor/kvstorage"
+	"github.com/demdxx/asyncp/v2/streams"
 )
 
 var (

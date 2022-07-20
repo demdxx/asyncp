@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/geniusrabbit/notificationcenter"
+	"github.com/geniusrabbit/notificationcenter/v2"
 )
 
 // ErrNullMessageValue if value is nil

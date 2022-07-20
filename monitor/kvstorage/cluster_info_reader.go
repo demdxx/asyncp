@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/demdxx/asyncp/monitor"
+	"github.com/demdxx/asyncp/v2/monitor"
 	"github.com/demdxx/gocast"
 	"go.uber.org/multierr"
 )

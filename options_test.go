@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/demdxx/asyncp/monitor"
-	"github.com/demdxx/asyncp/monitor/kvstorage"
+	"github.com/demdxx/asyncp/v2/monitor"
+	"github.com/demdxx/asyncp/v2/monitor/kvstorage"
 	"github.com/stretchr/testify/assert"
 )
 

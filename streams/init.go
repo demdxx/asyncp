@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/url"
 
-	nc "github.com/geniusrabbit/notificationcenter"
+	nc "github.com/geniusrabbit/notificationcenter/v2"
 )
 
 var subscribers = map[string]func(context.Context, string) (nc.Subscriber, error){}

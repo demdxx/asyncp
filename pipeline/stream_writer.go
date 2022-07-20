@@ -3,7 +3,7 @@ package pipeline
 import (
 	"sync"
 
-	"github.com/demdxx/asyncp"
+	"github.com/demdxx/asyncp/v2"
 	"github.com/pkg/errors"
 )
 

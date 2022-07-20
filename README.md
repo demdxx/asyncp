@@ -22,8 +22,8 @@ execute the whole task or all not.
 ```go
 import (
   ...
-  "github.com/demdxx/asyncp"
-  "github.com/demdxx/asyncp/streams"
+  "github.com/demdxx/asyncp/v2"
+  "github.com/demdxx/asyncp/v2/streams"
   ...
 )
 

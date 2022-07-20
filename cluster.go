@@ -10,7 +10,7 @@ import (
 
 	"go.uber.org/multierr"
 
-	"github.com/demdxx/asyncp/monitor"
+	"github.com/demdxx/asyncp/v2/monitor"
 )
 
 const (

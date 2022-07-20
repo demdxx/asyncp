@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/demdxx/asyncp/monitor"
+	"github.com/demdxx/asyncp/v2/monitor"
 	"github.com/demdxx/gocast"
 )
 

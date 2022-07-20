@@ -5,7 +5,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/demdxx/asyncp/monitor"
+	"github.com/demdxx/asyncp/v2/monitor"
 )
 
 type (

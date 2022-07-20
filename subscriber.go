@@ -5,7 +5,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/geniusrabbit/notificationcenter"
+	"github.com/geniusrabbit/notificationcenter/v2"
 )
 
 // Receiver defines the processing interface.

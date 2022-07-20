@@ -26,14 +26,17 @@ ARCH_LIST = amd64 arm64 arm
 .PHONY: mon-build
 mon-build: ## Build monitor application
 	@echo "Build monitor application"
-	@rm -rf .build/apmonitor
-	for os in $(OS_LIST); do \
+	@rm -rf .build
+	@for os in $(OS_LIST); do \
 		for arch in $(ARCH_LIST); do \
-			echo "Build $$os/$$arch"; \
-			GOOS=$$os GOARCH=$$arch CGO_ENABLED=${BUILD_CGO_ENABLED} \
-				go build -o .build/$$os/$$arch/apmonitor cmd/apmonitor/main.go; \
+			if [ "$$os/$$arch" != "darwin/arm" ]; then \
+				echo "Build $$os/$$arch"; \
+				GOOS=$$os GOARCH=$$arch CGO_ENABLED=${BUILD_CGO_ENABLED} \
+					go build -o .build/$$os/$$arch/apmonitor cmd/apmonitor/main.go; \
+			fi \
 		done \
 	done
+
 
 .PHONY: mon-build-docker
 mon-build-docker: mon-build ## Build monitor docker service

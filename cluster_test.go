@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/demdxx/asyncp/monitor"
+	"github.com/demdxx/asyncp/v2/monitor"
 	"github.com/stretchr/testify/assert"
 )
 

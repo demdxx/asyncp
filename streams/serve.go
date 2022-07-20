@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/demdxx/asyncp"
-	nc "github.com/geniusrabbit/notificationcenter"
+	"github.com/demdxx/asyncp/v2"
+	nc "github.com/geniusrabbit/notificationcenter/v2"
 )
 
 // ListenAndServe task service for sources
-func ListenAndServe(ctx context.Context, srv *asyncp.TaskMux, sources ...interface{}) error {
+func ListenAndServe(ctx context.Context, srv *asyncp.TaskMux, sources ...any) error {
 	subscribers := make([]nc.Subscriber, 0, len(sources))
 	for _, src := range sources {
 		switch v := src.(type) {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/geniusrabbit/notificationcenter"
+	"github.com/geniusrabbit/notificationcenter/v2"
 )
 
 // Publisher writing interface

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/geniusrabbit/notificationcenter"
+	"github.com/geniusrabbit/notificationcenter/v2"
 	"github.com/pkg/errors"
 	"go.uber.org/multierr"
 )
@@ -290,3 +290,5 @@ func (srv *TaskMux) TaskMap() map[string][]string {
 	}
 	return mp
 }
+
+var _ = (notificationcenter.Receiver)((*TaskMux)(nil))

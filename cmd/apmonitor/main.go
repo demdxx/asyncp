@@ -14,9 +14,9 @@ import (
 	"github.com/rivo/tview"
 	cli "github.com/urfave/cli/v2"
 
-	"github.com/demdxx/asyncp/monitor"
-	"github.com/demdxx/asyncp/monitor/driver/redis"
-	"github.com/demdxx/asyncp/monitor/kvstorage"
+	"github.com/demdxx/asyncp/v2/monitor"
+	"github.com/demdxx/asyncp/v2/monitor/driver/redis"
+	"github.com/demdxx/asyncp/v2/monitor/kvstorage"
 )
 
 func main() {
