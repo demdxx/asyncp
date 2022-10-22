@@ -12,7 +12,7 @@ type (
 	// ContextWrapperFnk for prepare execution context
 	ContextWrapperFnk func(ctx context.Context) context.Context
 	// PanicHandlerFnk for any panic errors
-	PanicHandlerFnk func(Task, Event, interface{})
+	PanicHandlerFnk func(Task, Event, any)
 	// ErrorHandlerFnk for any error response
 	ErrorHandlerFnk func(Task, Event, error)
 )
@@ -67,7 +67,7 @@ func WithContextWrapper(w ContextWrapperFnk) Option {
 }
 
 // WithStreamResponseMap set option with stream mapping converted to factory
-func WithStreamResponseMap(streams ...interface{}) Option {
+func WithStreamResponseMap(streams ...any) Option {
 	return func(opt *Options) {
 		opt.ResponseFactory = NewMultistreamResponseFactory(streams...)
 	}

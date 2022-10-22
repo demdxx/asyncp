@@ -14,7 +14,7 @@ type defaultEventAllocator struct {
 
 func newDefaultEventAllocator() *defaultEventAllocator {
 	return &defaultEventAllocator{
-		pool: sync.Pool{New: func() interface{} {
+		pool: sync.Pool{New: func() any {
 			return new(event)
 		}},
 	}

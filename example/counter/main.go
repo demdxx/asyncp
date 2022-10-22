@@ -79,7 +79,7 @@ func main() {
 
 	fmt.Println("> subscribe counter")
 	sub := interval.NewSubscriber(time.Second,
-		interval.WithHandler(func() interface{} {
+		interval.WithHandler(func() any {
 			return asyncp.WithPayload("count", iterator)
 		}),
 		interval.WithErrorHandler(func(_ nc.Message, err error) {}))

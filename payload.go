@@ -11,10 +11,10 @@ type Payload interface {
 	Encode() ([]byte, error)
 
 	// Decode payload data into the target
-	Decode(target interface{}) error
+	Decode(target any) error
 }
 
-func newPayload(val interface{}) (Payload, error) {
+func newPayload(val any) (Payload, error) {
 	switch b := (val).(type) {
 	case nil:
 	case []byte:
@@ -29,7 +29,7 @@ type dataPayload struct {
 	bytes []byte
 }
 
-func (p dataPayload) Decode(target interface{}) error {
+func (p dataPayload) Decode(target any) error {
 	return json.Unmarshal(p.bytes, target)
 }
 
@@ -42,10 +42,10 @@ func (p dataPayload) MarshalJSON() ([]byte, error) {
 }
 
 type valuePayload struct {
-	value interface{}
+	value any
 }
 
-func (p *valuePayload) Decode(target interface{}) error {
+func (p *valuePayload) Decode(target any) error {
 	dst := valueFinal(reflect.ValueOf(target))
 	src := valueFinal(reflect.ValueOf(p.value))
 	dst.Set(src)

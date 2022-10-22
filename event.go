@@ -45,7 +45,7 @@ type Event interface {
 	WithName(name string) Event
 
 	// WithPayload returns new event object with extended payload context
-	WithPayload(payload interface{}) Event
+	WithPayload(payload any) Event
 
 	// WithError returns new event object with extended error value
 	WithError(err error) Event
@@ -94,7 +94,7 @@ type event struct {
 }
 
 // WithPayload returns new event object with payload data
-func WithPayload(eventName string, data interface{}) Event {
+func WithPayload(eventName string, data any) Event {
 	var (
 		payload Payload
 		id, err = uuid.NewRandom()
@@ -196,7 +196,7 @@ func (ev *event) WithName(name string) Event {
 }
 
 // WithPayload returns new event object with extended payload context
-func (ev *event) WithPayload(data interface{}) Event {
+func (ev *event) WithPayload(data any) Event {
 	newEvent := ev.Copy()
 	newEvent.err = nil
 	if payload, ok := data.(Payload); ok {

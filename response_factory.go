@@ -27,7 +27,7 @@ func NewStreamResponseFactory(publisher Publisher) ResponseWriterFactory {
 	return &streamResponseFactory{
 		publisher: publisher,
 		pool: sync.Pool{
-			New: func() interface{} { return &responseStreamWriter{} },
+			New: func() any { return &responseStreamWriter{} },
 		},
 	}
 }
@@ -70,7 +70,7 @@ type proxyResponseFactory struct {
 func NewProxyResponseFactory() ResponseWriterFactory {
 	return &proxyResponseFactory{
 		pool: sync.Pool{
-			New: func() interface{} { return &responseProxyWriter{} },
+			New: func() any { return &responseProxyWriter{} },
 		},
 	}
 }
@@ -131,7 +131,7 @@ type mutistreamResponseFactory struct {
 }
 
 // NewMultistreamResponseFactory returns implementation with multipublisher support
-func NewMultistreamResponseFactory(streams ...interface{}) ResponseWriterFactory {
+func NewMultistreamResponseFactory(streams ...any) ResponseWriterFactory {
 	var (
 		publishers []*multistreamItem
 		commonItem *multistreamItem
@@ -174,7 +174,7 @@ func NewMultistreamResponseFactory(streams ...interface{}) ResponseWriterFactory
 	return &mutistreamResponseFactory{
 		publishers: publishers,
 		pool: sync.Pool{
-			New: func() interface{} { return &responseStreamWriter{} },
+			New: func() any { return &responseStreamWriter{} },
 		},
 	}
 }

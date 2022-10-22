@@ -11,8 +11,8 @@ import (
 
 type testPublisher struct{ name string }
 
-func (p *testPublisher) String() string                                             { return p.name }
-func (p *testPublisher) Publish(ctx context.Context, messages ...interface{}) error { return nil }
+func (p *testPublisher) String() string                                     { return p.name }
+func (p *testPublisher) Publish(ctx context.Context, messages ...any) error { return nil }
 
 func TestMultistreamResponseFactory(t *testing.T) {
 	fc := NewMultistreamResponseFactory(

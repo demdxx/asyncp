@@ -79,7 +79,7 @@ Convert task to async executor.
 atask := asyncp.WrapAsyncTask(task,
   WithWorkerCount(10),
   WithWorkerPoolSize(20),
-  WithRecoverHandler(func(rec interface{}) {
+  WithRecoverHandler(func(rec any) {
     // ...
   }))
 

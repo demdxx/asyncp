@@ -33,17 +33,3 @@ mainLoop:
 	}
 	return res
 }
-
-func taskMapSize(m map[string]Promise) int {
-	if m == nil {
-		return 0
-	}
-	return len(m)
-}
-
-func eventMapSize(m map[string][]string) int {
-	if m == nil {
-		return 0
-	}
-	return len(m)
-}

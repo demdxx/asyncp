@@ -1,19 +1,19 @@
 package asyncp
 
-import (
-	"errors"
+import "github.com/demdxx/asyncp/v2/libs/errors"
+
+var (
+	// ErrSkipEvent in case of repeat count exceeds the limit
+	ErrSkipEvent = errors.ErrSkipEvent
+
+	// ErrNil in case of empty response
+	ErrNil = errors.ErrNil
 )
 
 func errorString(err error) string {
-	if err == nil {
-		return ``
-	}
-	return err.Error()
+	return errors.ErrorString(err)
 }
 
 func stringError(msg string) error {
-	if msg == `` {
-		return nil
-	}
-	return errors.New(msg)
+	return errors.StringError(msg)
 }

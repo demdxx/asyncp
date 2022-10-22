@@ -29,9 +29,10 @@ type Pipeline struct {
 // New defines the pipeline execution object of task sequences
 //
 // Example:
-//   pipe := pipeline.New("meta", NewMetaExtractor(), NewSummarise())
-//   data, err = pipe.Execute(ctx, data)
-func New(tasks ...interface{}) *Pipeline {
+//
+//	pipe := pipeline.New("meta", NewMetaExtractor(), NewSummarise())
+//	data, err = pipe.Execute(ctx, data)
+func New(tasks ...any) *Pipeline {
 	var (
 		pipe = &Pipeline{}
 		name string
@@ -54,7 +55,7 @@ func New(tasks ...interface{}) *Pipeline {
 }
 
 // AddTask puts new task in the list
-func (p *Pipeline) AddTask(name string, task interface{}) error {
+func (p *Pipeline) AddTask(name string, task any) error {
 	if name != "" {
 		if curTask, _ := p.TaskByName(name); curTask != nil {
 			return errors.Wrap(ErrTaskIsRegistered, name)

@@ -16,7 +16,7 @@ func TestAsyncTask(t *testing.T) {
 		recoverCount = int32(0)
 		executeCount = int32(0)
 		// Recover handler
-		recf = func(rec interface{}) {
+		recf = func(rec any) {
 			defer wg.Done()
 			atomic.AddInt32(&recoverCount, 1)
 		}
@@ -29,7 +29,7 @@ func TestAsyncTask(t *testing.T) {
 			return rw.WriteResonse(i)
 		})
 		// Response write wrapper
-		resp = ResponseHandlerFnk(func(response interface{}) error {
+		resp = ResponseHandlerFnk(func(response any) error {
 			if response.(int)%2 != 0 {
 				return fmt.Errorf(`test`)
 			}

@@ -14,25 +14,25 @@ type responseWriterRelseasePool interface {
 // ResponseWriter basic response functionality
 type ResponseWriter interface {
 	// WriteResonse sends data into the stream response
-	WriteResonse(response interface{}) error
+	WriteResonse(response any) error
 
 	// RepeatWithResponse send data into the same stream response
-	RepeatWithResponse(response interface{}) error
+	RepeatWithResponse(response any) error
 
 	// Release response writer stream
 	Release() error
 }
 
 // ResponseHandlerFnk provides implementation of ResponseWriter interface
-type ResponseHandlerFnk func(response interface{}) error
+type ResponseHandlerFnk func(response any) error
 
 // WriteResonse sends data into the stream response
-func (f ResponseHandlerFnk) WriteResonse(response interface{}) error {
+func (f ResponseHandlerFnk) WriteResonse(response any) error {
 	return f(response)
 }
 
 // RepeatWithResponse send data into the same stream response
-func (f ResponseHandlerFnk) RepeatWithResponse(response interface{}) error {
+func (f ResponseHandlerFnk) RepeatWithResponse(response any) error {
 	return f(response)
 }
 
@@ -48,7 +48,7 @@ type responseProxyWriter struct {
 	pool    responseWriterRelseasePool
 }
 
-func (wr *responseProxyWriter) WriteResonse(value interface{}) error {
+func (wr *responseProxyWriter) WriteResonse(value any) error {
 	var (
 		err    error
 		events = wr.promise.TargetEventName()
@@ -62,11 +62,11 @@ func (wr *responseProxyWriter) WriteResonse(value interface{}) error {
 	return err
 }
 
-func (wr *responseProxyWriter) RepeatWithResponse(value interface{}) error {
+func (wr *responseProxyWriter) RepeatWithResponse(value any) error {
 	return wr.writeResonseWithEventName(wr.promise.EventName(), value, true)
 }
 
-func (wr *responseProxyWriter) writeResonseWithEventName(name string, value interface{}, repeat bool) error {
+func (wr *responseProxyWriter) writeResonseWithEventName(name string, value any, repeat bool) error {
 	var ev Event
 	switch v := value.(type) {
 	case Event:
@@ -102,7 +102,7 @@ type responseStreamWriter struct {
 	mux     *TaskMux
 }
 
-func (wr *responseStreamWriter) WriteResonse(value interface{}) error {
+func (wr *responseStreamWriter) WriteResonse(value any) error {
 	var (
 		err    error
 		events = wr.promise.TargetEventName()
@@ -116,11 +116,11 @@ func (wr *responseStreamWriter) WriteResonse(value interface{}) error {
 	return err
 }
 
-func (wr *responseStreamWriter) RepeatWithResponse(value interface{}) error {
+func (wr *responseStreamWriter) RepeatWithResponse(value any) error {
 	return wr.writeResonseWithEventName(wr.promise.EventName(), value, true)
 }
 
-func (wr *responseStreamWriter) writeResonseWithEventName(name string, value interface{}, repeat bool) error {
+func (wr *responseStreamWriter) writeResonseWithEventName(name string, value any, repeat bool) error {
 	var ev Event
 	switch v := value.(type) {
 	case Event:

@@ -2,7 +2,6 @@ package asyncp
 
 import (
 	"context"
-	"errors"
 
 	"github.com/geniusrabbit/notificationcenter/v2"
 )
@@ -12,9 +11,6 @@ type Publisher = notificationcenter.Publisher
 
 // DefaultRetranslateCount shows amount of event repeating in the pipeline
 const DefaultRetranslateCount = 30
-
-// ErrSkipEvent in case of repeat count exceeds the limit
-var ErrSkipEvent = errors.New("skip event")
 
 // Retranslator of the event to the stream
 func Retranslator(repeatMaxCount int, pubs ...Publisher) Task {
@@ -69,8 +65,8 @@ func (wr *publisherEventWrapper) SetMux(mux *TaskMux) {
 	wr.mux = mux
 }
 
-func (wr *publisherEventWrapper) Publish(ctx context.Context, messages ...interface{}) error {
-	events := make([]interface{}, 0, len(messages))
+func (wr *publisherEventWrapper) Publish(ctx context.Context, messages ...any) error {
+	events := make([]any, 0, len(messages))
 	for _, msg := range messages {
 		event := WithPayload(wr.name, msg)
 		event.SetMux(wr.mux)

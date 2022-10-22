@@ -2,13 +2,13 @@ package kvstorage
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/demdxx/asyncp/v2/libs/errors"
 	"github.com/demdxx/asyncp/v2/monitor"
 	"github.com/demdxx/gocast"
 )
@@ -16,7 +16,7 @@ import (
 const failoverTaskName = "$failover"
 
 // ErrNil in case of empty response
-var ErrNil = errors.New("nil response")
+var ErrNil = errors.ErrNil
 
 // Storage monitor implementation for redis
 type Storage struct {
@@ -106,14 +106,13 @@ func (s *Storage) TaskInfo(name string) (*monitor.TaskInfo, error) {
 	taskInfo := s.taskInfo[name]
 	s.mx.RUnlock()
 
-	hasTaskInfo := false
 	if taskInfo == nil {
 		s.mx.Lock()
 		defer s.mx.Unlock()
-		hasTaskInfo = true
 		vals, err := s.client.MGet(
 			s.metricKey(name+"_total"),
 			s.metricKey(name+"_error"),
+			s.metricKey(name+"_skip"),
 			s.metricKey(name+"_min"),
 			s.metricKey(name+"_avg"),
 			s.metricKey(name+"_max"),
@@ -124,14 +123,14 @@ func (s *Storage) TaskInfo(name string) (*monitor.TaskInfo, error) {
 		taskInfo = &monitor.TaskInfo{
 			TotalCount:   gocast.ToUint64(vals[0]),
 			ErrorCount:   gocast.ToUint64(vals[1]),
-			SuccessCount: 0,
-			MinExecTime:  time.Duration(gocast.ToInt64(vals[2])),
-			AvgExecTime:  time.Duration(gocast.ToInt64(vals[3])),
-			MaxExecTime:  time.Duration(gocast.ToInt64(vals[4])),
+			SkipCount:    gocast.ToUint64(vals[2]),
+			SuccessCount: gocast.ToUint64(vals[0]) - gocast.ToUint64(vals[1]) - gocast.ToUint64(vals[2]),
+			MinExecTime:  time.Duration(gocast.ToInt64(vals[3])),
+			AvgExecTime:  time.Duration(gocast.ToInt64(vals[4])),
+			MaxExecTime:  time.Duration(gocast.ToInt64(vals[5])),
+			CreatedAt:    time.Now(),
+			UpdatedAt:    time.Now(),
 		}
-		taskInfo.SuccessCount = taskInfo.TotalCount - taskInfo.ErrorCount
-	}
-	if !hasTaskInfo {
 		s.taskInfo[name] = taskInfo
 	}
 	return taskInfo, nil
@@ -144,7 +143,7 @@ func (s *Storage) TaskInfoByID(id string) (*monitor.TaskInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	taskInfo.SuccessCount = taskInfo.TotalCount - taskInfo.ErrorCount
+	taskInfo.SuccessCount = taskInfo.TotalCount - taskInfo.ErrorCount - taskInfo.SkipCount
 	return taskInfo, nil
 }
 
@@ -178,7 +177,11 @@ func (s *Storage) ExecuteTask(event monitor.EventType, execTime time.Duration) e
 	eventName := event.Name()
 	_, _ = tx.Incr(s.metricKey(eventName + "_total"))
 	if event.Err() != nil {
-		_, _ = tx.Incr(s.metricKey(eventName + "_error"))
+		if errors.Is(event.Err(), errors.ErrSkipEvent) {
+			_, _ = tx.Incr(s.metricKey(eventName + "_skip"))
+		} else {
+			_, _ = tx.Incr(s.metricKey(eventName + "_error"))
+		}
 	}
 	_ = tx.MSet(
 		s.metricKey(eventName+"_min"), int64(taskInfo.MinExecTime),
@@ -200,7 +203,7 @@ func (s *Storage) ExecuteFailoverTask(event monitor.EventType, execTime time.Dur
 		execTime)
 }
 
-func (s *Storage) setJSON(key string, value interface{}, expiration time.Duration, tx ...KeyValueBasic) error {
+func (s *Storage) setJSON(key string, value any, expiration time.Duration, tx ...KeyValueBasic) error {
 	data, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -212,10 +215,10 @@ func (s *Storage) setJSON(key string, value interface{}, expiration time.Duratio
 	return kvacc.Set(key, string(data), expiration)
 }
 
-func (s *Storage) getJSON(key string, target interface{}, tx ...KeyValueBasic) error {
+func (s *Storage) getJSON(key string, target any, tx ...KeyValueBasic) error {
 	var (
 		err   error
-		data  interface{}
+		data  any
 		kvacc = s.client.(KeyValueBasic)
 	)
 	if len(tx) > 0 && tx[0] != nil {

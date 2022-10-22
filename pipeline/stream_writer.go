@@ -15,7 +15,7 @@ type eventPoolItem struct {
 }
 
 var eventPool = &sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return &eventPoolItem{data: make([]asyncp.Event, 0, 100)}
 	},
 }
@@ -38,7 +38,7 @@ func newStream(event asyncp.Event) *stream {
 }
 
 // WriteEvent sends event into the stream response
-func (stream *stream) WriteResonse(response interface{}) error {
+func (stream *stream) WriteResonse(response any) error {
 	stream.mx.Lock()
 	defer stream.mx.Unlock()
 	switch r := response.(type) {
@@ -51,7 +51,7 @@ func (stream *stream) WriteResonse(response interface{}) error {
 }
 
 // RepeatWithResponse send data into the same stream response
-func (stream *stream) RepeatWithResponse(response interface{}) error {
+func (stream *stream) RepeatWithResponse(response any) error {
 	return ErrResponseRepeatUnsupported
 }
 

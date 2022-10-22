@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -196,13 +197,16 @@ func (cluster *Cluster) TargetEventsAfter(eventName string) []string {
 
 // AllTasks returns all events and links
 func (cluster *Cluster) AllTasks() map[string][]string {
+	cluster.mx.RLock()
+	defer cluster.mx.RUnlock()
 	if cluster.appInfo == nil {
-		return map[string][]string{}
+		return nil
 	}
 	return cluster.appInfo.Tasks
 }
 
 // AllTaskChains returns all events task chains
+// TODO: revise the way of tasks information representation
 func (cluster *Cluster) AllTaskChains() map[string][]string {
 	var (
 		tasks       = cluster.AllTasks()
@@ -218,10 +222,27 @@ mainLoop:
 			canContinue = false
 			for _, key := range v {
 				if len(chains[key]) > 0 {
-					chains[k] = append(v, chains[key]...)
+					chains[k] = mergeStrArr(chains[k], append(v, chains[key]...))
 					canContinue = true
 				}
 				delete(chains, key)
+			}
+			for _, key := range v {
+				key = "@" + key
+				if len(chains[key]) > 0 {
+					chains[k] = mergeStrArr(chains[k], append(v, chains[key]...))
+					canContinue = true
+				}
+				delete(chains, key)
+			}
+			for _, key := range []string{strings.TrimLeft(k, "@"), "@" + strings.TrimLeft(k, "@")} {
+				if len(chains[key]) > 0 {
+					pSize := len(chains[k])
+					chains[k] = mergeStrArr(chains[k], append(v, chains[key]...))
+					if pSize != len(chains[k]) {
+						canContinue = true
+					}
+				}
 			}
 			if canContinue {
 				continue mainLoop

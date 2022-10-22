@@ -3,6 +3,8 @@ package monitor
 import (
 	"strings"
 	"time"
+
+	"github.com/demdxx/asyncp/v2/libs/errors"
 )
 
 // ApplicationInfo with basic description
@@ -42,6 +44,7 @@ type TaskInfo struct {
 	AvgExecTime  time.Duration `json:"avg_exec_time"`
 	MaxExecTime  time.Duration `json:"max_exec_time"`
 	TaskNames    []string      `json:"task_names,omitempty"` // The list of finished task names
+	CreatedAt    time.Time     `json:"created_at"`
 	UpdatedAt    time.Time     `json:"updated_at"`
 }
 
@@ -49,7 +52,7 @@ type TaskInfo struct {
 func (task *TaskInfo) Inc(err error, execTime time.Duration) {
 	task.TotalCount++
 	if err != nil {
-		if strings.Contains(err.Error(), "skip event") {
+		if errors.Is(err, errors.ErrSkipEvent) || strings.Contains(err.Error(), "skip event") {
 			task.SkipCount++
 		} else {
 			task.ErrorCount++
@@ -73,7 +76,7 @@ func (task *TaskInfo) Inc(err error, execTime time.Duration) {
 
 // Add task info
 func (task *TaskInfo) Add(info *TaskInfo) {
-	if info == nil {
+	if !info.IsInited() {
 		return
 	}
 	task.TotalCount += info.TotalCount
@@ -108,8 +111,15 @@ func (task *TaskInfo) AddTaskName(name string) {
 	task.touch()
 }
 
+func (task *TaskInfo) IsInited() bool {
+	return task != nil && !task.CreatedAt.IsZero()
+}
+
 func (task *TaskInfo) touch() {
 	now := time.Now()
+	if task.CreatedAt.IsZero() {
+		task.CreatedAt = now
+	}
 	if now.Sub(task.UpdatedAt) > 0 {
 		task.UpdatedAt = now
 	}

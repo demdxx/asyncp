@@ -15,7 +15,7 @@ var testTask = FuncTask(func(ctx context.Context, event Event, responseWriter Re
 
 func TestPromise(t *testing.T) {
 	mux := NewTaskMux()
-	pr1 := newPoromise(mux, nil, "test", testTask)
+	pr1 := newPoromise(mux, nil, "test", testTask, false)
 	pr2 := pr1.Then(testTask)
 	pr3 := pr2.Then(testTask)
 

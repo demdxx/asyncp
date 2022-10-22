@@ -8,19 +8,19 @@ type KeyValueBasic interface {
 	Keys(pattern string) ([]string, error)
 
 	// Get value from key
-	Get(key string) (interface{}, error)
+	Get(key string) (any, error)
 
 	// MGet returns values from banch of keys in the same order
-	MGet(keys ...string) ([]interface{}, error)
+	MGet(keys ...string) ([]any, error)
 
 	// Incr value with key
 	Incr(key string) (int64, error)
 
 	// Set value for the key
-	Set(key string, value interface{}, expiration ...time.Duration) error
+	Set(key string, value any, expiration ...time.Duration) error
 
 	// MSet multiple set operation with {Key, Value, ...} input
-	MSet(vals ...interface{}) error
+	MSet(vals ...any) error
 
 	// Del keys from the storage
 	Del(key ...string) error

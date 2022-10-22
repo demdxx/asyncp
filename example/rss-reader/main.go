@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/demdxx/asyncp/v2"
@@ -47,7 +47,7 @@ func downloadRSSList(ctx context.Context, event asyncp.Event, responseWriter asy
 		return err
 	}
 	defer res.Body.Close()
-	data, err := ioutil.ReadAll(res.Body)
+	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func downloadRSSItem(ctx context.Context, event asyncp.Event, responseWriter asy
 		return err
 	}
 	defer res.Body.Close()
-	data, err := ioutil.ReadAll(res.Body)
+	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return err
 	}

@@ -7,6 +7,7 @@ import (
 )
 
 // Task describes a single execution unit
+//
 //go:generate mockgen -source $GOFILE -package mocks -destination mocks/task.go
 type Task interface {
 	// Execute the list of subtasks with input data collection.
@@ -34,7 +35,7 @@ func (f FuncTask) Async(options ...AsyncOption) *AsyncTask {
 }
 
 // TaskFrom converts income handler type to Task interface
-func TaskFrom(handler interface{}) Task {
+func TaskFrom(handler any) Task {
 	switch h := handler.(type) {
 	case Task:
 		return h
@@ -53,7 +54,7 @@ var (
 )
 
 // ExtFuncTask wraps function argument with arbitrary input data type
-func ExtFuncTask(f interface{}) FuncTask {
+func ExtFuncTask(f any) FuncTask {
 	fv := reflect.ValueOf(f)
 	if fv.Kind() != reflect.Func {
 		panic("argument must be a function")
@@ -124,7 +125,7 @@ func ExtFuncTask(f interface{}) FuncTask {
 	}
 }
 
-func newValue(t reflect.Type) (reflect.Value, interface{}) {
+func newValue(t reflect.Type) (reflect.Value, any) {
 	if t.Kind() == reflect.Ptr {
 		return newValue(t.Elem())
 	}

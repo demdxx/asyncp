@@ -24,12 +24,3 @@ func TestStringArrExclude(t *testing.T) {
 	assert.ElementsMatch(t, []string{"a"}, excludeFromStrArr([]string{"a", "b"}, "b"))
 	assert.ElementsMatch(t, []string{"a", "b"}, excludeFromStrArr([]string{"a", "b"}, "c", "d"))
 }
-
-func TestMapSize(t *testing.T) {
-	assert.Equal(t, 0, taskMapSize(nil))
-	assert.Equal(t, 0, eventMapSize(nil))
-	assert.Equal(t, 0, taskMapSize(map[string]Promise{}))
-	assert.Equal(t, 0, eventMapSize(map[string][]string{}))
-	assert.Equal(t, 1, taskMapSize(map[string]Promise{"": nil}))
-	assert.Equal(t, 1, eventMapSize(map[string][]string{"": nil}))
-}

@@ -78,12 +78,19 @@ func NewTaskMux(options ...Option) *TaskMux {
 
 // Handle register new task for specific chanel
 // Task after other task can be defined by "parentTaskName>currentTaskName"
-func (srv *TaskMux) Handle(taskName string, handler interface{}) Promise {
+func (srv *TaskMux) Handle(taskName string, handler any) Promise {
+	return srv.handleExt(taskName, handler, false)
+}
+
+func (srv *TaskMux) handleExt(taskName string, handler any, anonymous bool) Promise {
+	var (
+		parentPromis   Promise
+		parentTaskName = ""
+		splitName      = strings.SplitN(taskName, ">", 2)
+	)
 	if srv.tasks == nil {
 		srv.tasks = map[string]Promise{}
 	}
-	parentTaskName := ""
-	splitName := strings.SplitN(taskName, ">", 2)
 	if len(splitName) > 1 {
 		parentTaskName = splitName[0]
 		taskName = splitName[1]
@@ -91,7 +98,12 @@ func (srv *TaskMux) Handle(taskName string, handler interface{}) Promise {
 	if _, ok := srv.tasks[taskName]; ok {
 		panic(errors.Wrap(ErrChanelTaken, taskName))
 	}
-	taskItemValue := newPoromise(srv, nil, taskName, TaskFrom(handler))
+	if parentTaskName != "" {
+		// If there is no parent promis in the scope of local tasks
+		// then the parent is external task
+		parentPromis = srv.tasks[taskName]
+	}
+	taskItemValue := newPoromise(srv, parentPromis, taskName, TaskFrom(handler), anonymous)
 	srv.tasks[taskName] = taskItemValue
 	if parentTaskName != "" {
 		// Links global event name and the target external one
@@ -103,7 +115,7 @@ func (srv *TaskMux) Handle(taskName string, handler interface{}) Promise {
 }
 
 // Failver handler if was reseaved event with unsappoted event
-func (srv *TaskMux) Failver(task interface{}) error {
+func (srv *TaskMux) Failver(task any) error {
 	srv.failoverTask = &promise{task: TaskFrom(task)}
 	return nil
 }
@@ -277,7 +289,7 @@ func (srv *TaskMux) targetEventsAfter(eventName string) []string {
 
 // TaskMap returns linked list of events
 func (srv *TaskMux) TaskMap() map[string][]string {
-	mp := make(map[string][]string, taskMapSize(srv.tasks)+eventMapSize(srv.hiddenTaskMapping))
+	mp := make(map[string][]string, len(srv.tasks)+len(srv.hiddenTaskMapping))
 	if srv.tasks != nil {
 		for eventName, promiseObject := range srv.tasks {
 			mp[eventName] = mergeStrArr(mp[eventName], promiseObject.TargetEventName())

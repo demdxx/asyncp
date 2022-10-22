@@ -16,7 +16,7 @@ type Message = notificationcenter.Message
 
 type message []byte
 
-func messageFrom(value interface{}) (message, error) {
+func messageFrom(value any) (message, error) {
 	switch v := value.(type) {
 	case nil:
 	case []byte:
@@ -33,7 +33,7 @@ func messageFrom(value interface{}) (message, error) {
 	return nil, ErrNullMessageValue
 }
 
-func mustMessageFrom(value interface{}) message {
+func mustMessageFrom(value any) message {
 	msg, err := messageFrom(value)
 	if err != nil {
 		panic(err)

@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/demdxx/rpool"
+	"github.com/demdxx/rpool/v2"
 )
 
 // AsyncOption type options tune
@@ -17,7 +17,7 @@ type AsyncOptions struct {
 }
 
 // Pool of execution
-func (opt *AsyncOptions) Pool(fnk func(interface{})) *rpool.PoolFunc {
+func (opt *AsyncOptions) Pool(fnk func(any)) *rpool.PoolFunc[any] {
 	return rpool.NewPoolFunc(fnk, opt.poolOptions...)
 }
 
@@ -36,7 +36,7 @@ func WithWorkerPoolSize(size int) AsyncOption {
 }
 
 // WithRecoverHandler defined error handler
-func WithRecoverHandler(f func(interface{})) AsyncOption {
+func WithRecoverHandler(f func(any)) AsyncOption {
 	return func(opt *AsyncOptions) {
 		opt.poolOptions = append(opt.poolOptions, rpool.WithRecoverHandler(f))
 	}
@@ -50,7 +50,7 @@ type asyncTaskParams struct {
 
 // AsyncTask processor
 type AsyncTask struct {
-	execPool *rpool.PoolFunc
+	execPool *rpool.PoolFunc[any]
 	task     Task
 }
 
@@ -71,7 +71,7 @@ func (t *AsyncTask) Execute(ctx context.Context, event Event, responseWriter Res
 	return nil
 }
 
-func (t *AsyncTask) handler(ctx interface{}) {
+func (t *AsyncTask) handler(ctx any) {
 	p := ctx.(*asyncTaskParams)
 	defer func() {
 		err := p.rw.Release()

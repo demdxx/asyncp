@@ -44,7 +44,7 @@ func TestPipeline(t *testing.T) {
 		)
 	)
 
-	err := pipe.Execute(ctx, event, asyncp.ResponseHandlerFnk(func(payload interface{}) error {
+	err := pipe.Execute(ctx, event, asyncp.ResponseHandlerFnk(func(payload any) error {
 		if payload.(*testItem).Status == "success" {
 			totalSuccess++
 		}

@@ -24,7 +24,7 @@ func (v *promiseVirtual) TargetEvent(name string) Promise {
 }
 
 // Then execute the next task if current succeeded
-func (v *promiseVirtual) Then(handler interface{}) Promise {
+func (v *promiseVirtual) Then(handler any) Promise {
 	panic("`Then` defenition is not supported by virtual")
 }
 

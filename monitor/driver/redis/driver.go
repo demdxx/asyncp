@@ -27,7 +27,7 @@ func (acc *Accessor) Keys(pattern string) ([]string, error) {
 }
 
 // Get value from key
-func (acc *Accessor) Get(key string) (interface{}, error) {
+func (acc *Accessor) Get(key string) (any, error) {
 	res, err := acc.conn.Get(key).Result()
 	if err == redis.Nil {
 		return res, kvstorage.ErrNil
@@ -36,7 +36,7 @@ func (acc *Accessor) Get(key string) (interface{}, error) {
 }
 
 // MGet returns values from banch of keys in the same order
-func (acc *Accessor) MGet(keys ...string) ([]interface{}, error) {
+func (acc *Accessor) MGet(keys ...string) ([]any, error) {
 	return acc.conn.MGet(keys...).Result()
 }
 
@@ -46,7 +46,7 @@ func (acc *Accessor) Incr(key string) (int64, error) {
 }
 
 // Set value for the key
-func (acc *Accessor) Set(key string, value interface{}, expiration ...time.Duration) error {
+func (acc *Accessor) Set(key string, value any, expiration ...time.Duration) error {
 	var exp time.Duration
 	if len(expiration) > 0 {
 		exp = expiration[0]
@@ -55,7 +55,7 @@ func (acc *Accessor) Set(key string, value interface{}, expiration ...time.Durat
 }
 
 // MSet multiple set operation with {Key, Value, ...} input
-func (acc *Accessor) MSet(vals ...interface{}) error {
+func (acc *Accessor) MSet(vals ...any) error {
 	return acc.conn.MSet(vals...).Err()
 }
 

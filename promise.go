@@ -20,7 +20,7 @@ type Promise interface {
 	TargetEvent(name string) Promise
 
 	// Then execute the next task if current succeeded
-	Then(handler interface{}) Promise
+	Then(handler any) Promise
 
 	// ThenEvent which need to execute
 	ThenEvent(name string)
@@ -36,6 +36,8 @@ type Promise interface {
 }
 
 type promise struct {
+	anonymous bool
+
 	// Accept event with name
 	currentEventName string
 
@@ -55,12 +57,13 @@ type promise struct {
 	task Task
 }
 
-func newPoromise(mux *TaskMux, parent Promise, name string, task Task) *promise {
+func newPoromise(mux *TaskMux, parent Promise, name string, task Task, anonymous bool) *promise {
 	return &promise{
 		currentEventName: name,
 		parent:           parent,
 		mux:              mux,
 		task:             task,
+		anonymous:        anonymous,
 	}
 }
 
@@ -95,8 +98,8 @@ func (prom *promise) TargetEvent(name string) Promise {
 	return prom
 }
 
-func (prom *promise) Then(handler interface{}) Promise {
-	p := prom.mux.Handle(prom.genTargetEvent(), TaskFrom(handler))
+func (prom *promise) Then(handler any) Promise {
+	p := prom.mux.handleExt(prom.genTargetEvent(), handler, true)
 	p.(*promise).parent = prom
 	return p
 }

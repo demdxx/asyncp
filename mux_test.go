@@ -15,7 +15,7 @@ func TestMuxErrorPanic(t *testing.T) {
 		isFailover = false
 		lastEvent  Event
 		mux        = NewTaskMux(
-			WithPanicHandler(func(Task, Event, interface{}) { isPanic = true }),
+			WithPanicHandler(func(Task, Event, any) { isPanic = true }),
 			WithErrorHandler(func(Task, Event, error) { isError = true }),
 			WithStreamResponseMap(&testPublisher{name: "test"}),
 		)

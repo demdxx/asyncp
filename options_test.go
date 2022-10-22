@@ -23,7 +23,7 @@ func TestOptions(t *testing.T) {
 		options   Options
 		optionFnk = []Option{
 			WithMainExecContext(context.Background()),
-			WithPanicHandler(func(Task, Event, interface{}) {}),
+			WithPanicHandler(func(Task, Event, any) {}),
 			WithErrorHandler(func(Task, Event, error) {}),
 			WithContextWrapper(func(ctx context.Context) context.Context { return ctx }),
 			WithStreamResponseMap("item1", &testPublisher{name: "test-"}),
