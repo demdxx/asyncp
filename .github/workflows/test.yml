@@ -22,7 +22,9 @@ jobs:
     - name: Run linters
       uses: golangci/golangci-lint-action@v3
       with:
-        version: v1.29
+        version: v1.48.0
+        skip-cache: true
+        args: --fix
 
   test:
     needs: lint
