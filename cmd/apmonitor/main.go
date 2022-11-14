@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/demdxx/gocast"
+	"github.com/demdxx/gocast/v2"
 	"github.com/olekukonko/tablewriter"
 	"github.com/rivo/tview"
 	cli "github.com/urfave/cli/v2"
@@ -130,10 +130,10 @@ func updateInfo(iter int, textView *tview.TextView, info monitor.ClusterInfoRead
 				item[1] = taskInfo.MinExecTime.String()
 				item[2] = taskInfo.MaxExecTime.String()
 				item[3] = taskInfo.AvgExecTime.String()
-				item[4] = gocast.ToString(taskInfo.SuccessCount)
-				item[5] = gocast.ToString(taskInfo.SkipCount)
-				item[6] = gocast.ToString(taskInfo.ErrorCount)
-				item[7] = gocast.ToString(taskInfo.TotalCount)
+				item[4] = gocast.Str(taskInfo.SuccessCount)
+				item[5] = gocast.Str(taskInfo.SkipCount)
+				item[6] = gocast.Str(taskInfo.ErrorCount)
+				item[7] = gocast.Str(taskInfo.TotalCount)
 			}
 			data = append(data, item)
 		}
@@ -149,7 +149,7 @@ func updateInfo(iter int, textView *tview.TextView, info monitor.ClusterInfoRead
 	}
 	table := tablewriter.NewWriter(textView)
 	table.SetHeader([]string{"task", "min", "max", "avg", "success", "skip", "error", "total"})
-	table.SetFooter([]string{"", "", "", "", "", "", "Nodes" + indicatror, gocast.ToString(nodeCount)})
+	table.SetFooter([]string{"", "", "", "", "", "", "Nodes" + indicatror, gocast.Str(nodeCount)})
 	table.SetAutoWrapText(false)
 	table.SetAutoFormatHeaders(true)
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/demdxx/asyncp/v2/monitor"
-	"github.com/demdxx/gocast"
+	"github.com/demdxx/gocast/v2"
 	"go.uber.org/multierr"
 )
 
@@ -103,7 +103,7 @@ func (s *ClusterInfoReader) ListOfNodes() (map[string][]string, int, error) {
 		}
 		list := make([]string, 0, len(keys))
 		for _, val := range keys {
-			list = append(list, strings.TrimPrefix(gocast.ToString(val), prefix))
+			list = append(list, strings.TrimPrefix(gocast.Str(val), prefix))
 		}
 		res[appName] = list
 	}

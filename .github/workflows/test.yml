@@ -4,9 +4,11 @@ on:
       - v*
     branches:
       - master
+      - main
   pull_request:
     branches:
       - master
+      - main
 
 name: run tests
 jobs:

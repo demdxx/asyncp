@@ -10,7 +10,7 @@ import (
 
 	"github.com/demdxx/asyncp/v2/libs/errors"
 	"github.com/demdxx/asyncp/v2/monitor"
-	"github.com/demdxx/gocast"
+	"github.com/demdxx/gocast/v2"
 )
 
 const failoverTaskName = "$failover"
@@ -87,7 +87,7 @@ func (s *Storage) ReceiveCount() (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return gocast.ToUint64(val), nil
+	return gocast.Number[uint64](val), nil
 }
 
 // ReceiveEvent register and increments counters
@@ -121,13 +121,13 @@ func (s *Storage) TaskInfo(name string) (*monitor.TaskInfo, error) {
 			return nil, err
 		}
 		taskInfo = &monitor.TaskInfo{
-			TotalCount:   gocast.ToUint64(vals[0]),
-			ErrorCount:   gocast.ToUint64(vals[1]),
-			SkipCount:    gocast.ToUint64(vals[2]),
-			SuccessCount: gocast.ToUint64(vals[0]) - gocast.ToUint64(vals[1]) - gocast.ToUint64(vals[2]),
-			MinExecTime:  time.Duration(gocast.ToInt64(vals[3])),
-			AvgExecTime:  time.Duration(gocast.ToInt64(vals[4])),
-			MaxExecTime:  time.Duration(gocast.ToInt64(vals[5])),
+			TotalCount:   gocast.Number[uint64](vals[0]),
+			ErrorCount:   gocast.Number[uint64](vals[1]),
+			SkipCount:    gocast.Number[uint64](vals[2]),
+			SuccessCount: gocast.Number[uint64](vals[0]) - gocast.Number[uint64](vals[1]) - gocast.Number[uint64](vals[2]),
+			MinExecTime:  time.Duration(gocast.Number[int64](vals[3])),
+			AvgExecTime:  time.Duration(gocast.Number[int64](vals[4])),
+			MaxExecTime:  time.Duration(gocast.Number[int64](vals[5])),
 			CreatedAt:    time.Now(),
 			UpdatedAt:    time.Now(),
 		}
@@ -230,7 +230,7 @@ func (s *Storage) getJSON(key string, target any, tx ...KeyValueBasic) error {
 		}
 		return err
 	}
-	return json.Unmarshal([]byte(gocast.ToString(data)), target)
+	return json.Unmarshal([]byte(gocast.Str(data)), target)
 }
 
 func (s *Storage) mainKey() string {
