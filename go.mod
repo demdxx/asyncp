@@ -5,12 +5,12 @@ go 1.23
 require (
 	github.com/demdxx/gocast/v2 v2.9.0
 	github.com/demdxx/rpool/v2 v2.0.1
-	github.com/geniusrabbit/notificationcenter/v2 v2.3.5
+	github.com/geniusrabbit/notificationcenter/v2 v2.3.6
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pkg/errors v0.9.1
-	github.com/rivo/tview v0.0.0-20240818110301-fd649dbf1223
+	github.com/rivo/tview v0.0.0-20240921122403-a64fc48d7654
 	github.com/stretchr/testify v1.9.0
 	github.com/urfave/cli/v2 v2.27.4
 	go.uber.org/multierr v1.11.0
