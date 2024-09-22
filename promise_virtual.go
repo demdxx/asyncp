@@ -31,6 +31,12 @@ func (v *promiseVirtual) Then(handler any) Promise {
 // ThenEvent which need to execute
 func (v *promiseVirtual) ThenEvent(name string) { v.targetEventName = []string{name} }
 
+// IsAnonymous promise type
+func (v *promiseVirtual) IsAnonymous() bool { return false }
+
+// LastPromise returns the last promise in the chain
+func (v *promiseVirtual) LastPromise() Promise { return nil }
+
 // Parent promise item
 func (v *promiseVirtual) Parent() Promise { return nil }
 

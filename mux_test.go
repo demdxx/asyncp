@@ -20,7 +20,10 @@ func TestMuxErrorPanic(t *testing.T) {
 			WithStreamResponseMap(&testPublisher{name: "test"}),
 		)
 	)
-	_ = mux.Handle(`error`, FuncTask(func(_ context.Context, e Event, _ ResponseWriter) error { lastEvent = e; return fmt.Errorf(`test`) }))
+	_ = mux.Handle(`error`, FuncTask(func(_ context.Context, e Event, _ ResponseWriter) error {
+		lastEvent = e.(*event).Copy()
+		return fmt.Errorf(`test`)
+	}))
 	_ = mux.Handle(`panic`, FuncTask(func(context.Context, Event, ResponseWriter) error { panic("test") }))
 	_ = mux.Handle(`panic>noop`, FuncTask(func(context.Context, Event, ResponseWriter) error { panic("noop") }))
 	_ = mux.Failver(FuncTask(func(context.Context, Event, ResponseWriter) error { isFailover = true; return nil }))
@@ -33,10 +36,9 @@ func TestMuxErrorPanic(t *testing.T) {
 	assert.True(t, isFailover, `failover`)
 	assert.NoError(t, mux.Close())
 	assert.Equal(t, map[string][]string{
-		`error`:  {},
-		`panic`:  {},
-		`@panic`: {"noop"},
-		`noop`:   {},
+		`error`: {},
+		`panic`: {"noop"},
+		`noop`:  {},
 	}, mux.TaskMap())
 	totalTasks, completeTasks := mux.CompleteTasks(lastEvent)
 	assert.ElementsMatch(t, []string{`error`}, totalTasks)

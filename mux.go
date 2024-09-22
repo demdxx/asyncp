@@ -82,18 +82,13 @@ func (srv *TaskMux) Handle(taskName string, handler any) Promise {
 	return srv.handleExt(taskName, handler, false)
 }
 
-func (srv *TaskMux) handleExt(taskName string, handler any, anonymous bool) Promise {
+func (srv *TaskMux) handleExt(name string, handler any, anonymous bool) Promise {
 	var (
-		parentPromis   Promise
-		parentTaskName = ""
-		splitName      = strings.SplitN(taskName, ">", 2)
+		parentPromis             Promise
+		parentTaskName, taskName = prepareTaskName(name)
 	)
 	if srv.tasks == nil {
 		srv.tasks = map[string]Promise{}
-	}
-	if len(splitName) > 1 {
-		parentTaskName = splitName[0]
-		taskName = splitName[1]
 	}
 	if _, ok := srv.tasks[taskName]; ok {
 		panic(errors.Wrap(ErrChanelTaken, taskName))
@@ -101,15 +96,24 @@ func (srv *TaskMux) handleExt(taskName string, handler any, anonymous bool) Prom
 	if parentTaskName != "" {
 		// If there is no parent promis in the scope of local tasks
 		// then the parent is external task
-		parentPromis = srv.tasks[taskName]
+		if parentPromis = srv.tasks[parentTaskName]; parentPromis != nil {
+			parentPromis = parentPromis.LastPromise()
+		}
 	}
+
 	taskItemValue := newPoromise(srv, parentPromis, taskName, TaskFrom(handler), anonymous)
 	srv.tasks[taskName] = taskItemValue
-	if parentTaskName != "" {
+
+	if parentTaskName != "" && parentPromis == nil {
 		// Links global event name and the target external one
 		taskItemValue.parent = newPromisVirtual(parentTaskName, taskName)
 		parentTaskName = "@" + parentTaskName
 		srv.hiddenTaskMapping[parentTaskName] = append(srv.hiddenTaskMapping[parentTaskName], taskName)
+	}
+
+	// If parent task is not virtual then add event to the parent task
+	if parentPromis != nil && !parentPromis.IsVirtual() {
+		parentPromis.ThenEvent(taskName)
 	}
 	return taskItemValue
 }
@@ -123,7 +127,7 @@ func (srv *TaskMux) Failver(task any) error {
 // Receive definds the processing function
 func (srv *TaskMux) Receive(msg Message) error {
 	event, err := srv.eventAllocator.Decode(msg)
-	if err != nil {
+	if event != nil {
 		defer func() {
 			_ = srv.eventAllocator.Release(event)
 			if srv.panicHandler != nil {
@@ -295,12 +299,25 @@ func (srv *TaskMux) TaskMap() map[string][]string {
 			mp[eventName] = mergeStrArr(mp[eventName], promiseObject.TargetEventName())
 		}
 	}
+
 	if srv.hiddenTaskMapping != nil {
 		for eventName, targetEvent := range srv.hiddenTaskMapping {
 			mp[eventName] = mergeStrArr(mp[eventName], targetEvent)
 		}
 	}
+
 	return mp
+}
+
+func prepareTaskName(name string) (parent, target string) {
+	splitName := strings.SplitN(name, ">", 2)
+	if len(splitName) > 1 {
+		parent = splitName[0]
+		target = splitName[1]
+	} else {
+		target = splitName[0]
+	}
+	return parent, target
 }
 
 var _ = (notificationcenter.Receiver)((*TaskMux)(nil))

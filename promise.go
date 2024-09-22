@@ -25,8 +25,14 @@ type Promise interface {
 	// ThenEvent which need to execute
 	ThenEvent(name string)
 
+	// IsAnonymous promise type
+	IsAnonymous() bool
+
 	// Parent promise item
 	Parent() Promise
+
+	// LastPromise returns the last promise in the chain
+	LastPromise() Promise
 
 	// Task executor interface
 	Task() Task
@@ -99,8 +105,7 @@ func (prom *promise) TargetEvent(name string) Promise {
 }
 
 func (prom *promise) Then(handler any) Promise {
-	p := prom.mux.handleExt(prom.genTargetEvent(), handler, true)
-	p.(*promise).parent = prom
+	p := prom.mux.handleExt(prom.EventName()+">"+prom.genTargetEvent(), handler, true)
 	return p
 }
 
@@ -112,6 +117,19 @@ func (prom *promise) Parent() Promise {
 	return prom.parent
 }
 
+func (prom *promise) LastPromise() Promise {
+	for _, name := range prom.targetEventName {
+		if task := prom.mux.tasks[name]; task != nil {
+			return task.LastPromise()
+		}
+	}
+	return prom
+}
+
+func (prom *promise) IsAnonymous() bool {
+	return prom.anonymous
+}
+
 func (prom *promise) Origin(novirtual ...bool) (Promise, int) {
 	depth := 0
 	p := prom.Parent()
@@ -121,6 +139,9 @@ func (prom *promise) Origin(novirtual ...bool) (Promise, int) {
 		}
 		for {
 			depth++
+			if !p.IsAnonymous() {
+				break
+			}
 			pr := p.Parent()
 			if pr == nil || pr.IsVirtual() {
 				break
