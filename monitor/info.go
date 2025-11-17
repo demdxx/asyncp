@@ -36,6 +36,7 @@ func (app *ApplicationInfo) Merge(info *ApplicationInfo) {
 
 // TaskInfo aggregated in one record
 type TaskInfo struct {
+	ID           string        `json:"id,omitempty"`
 	TotalCount   uint64        `json:"total_count"`
 	ErrorCount   uint64        `json:"error_count"`
 	SuccessCount uint64        `json:"success_count"`

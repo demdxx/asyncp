@@ -46,7 +46,7 @@ func downloadRSSList(ctx context.Context, event asyncp.Event, responseWriter asy
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return err
@@ -82,7 +82,7 @@ func downloadRSSItem(ctx context.Context, event asyncp.Event, responseWriter asy
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return err
@@ -119,7 +119,7 @@ func main() {
 		Then(downloadRSSItem).
 		Then(printResults).
 		Then(closeAction(proxy))
-	_ = mx.Failver(asyncp.Retranslator(0, mempr.Publisher()))
+	_ = mx.Failover(asyncp.Retranslator(0, mempr.Publisher()))
 
 	_ = mempr.Publisher().Publish(context.Background(), asyncp.WithPayload("rss", "https://www.uber.com/blog/rss/"))
 

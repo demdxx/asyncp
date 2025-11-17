@@ -30,7 +30,7 @@ func TestTask(t *testing.T) {
 			WithResponseFactory(NewProxyResponseFactory()),
 		)
 	)
-	_ = mux.Failver(failoverTask)
+	_ = mux.Failover(failoverTask)
 	mux.Handle("test", testTask)
 
 	err := mux.ExecuteEvent(event)

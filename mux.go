@@ -118,8 +118,8 @@ func (srv *TaskMux) handleExt(name string, handler any, anonymous bool) Promise 
 	return taskItemValue
 }
 
-// Failver handler if was reseaved event with unsappoted event
-func (srv *TaskMux) Failver(task any) error {
+// Failover handler if was reseaved event with unsappoted event
+func (srv *TaskMux) Failover(task any) error {
 	srv.failoverTask = &promise{task: TaskFrom(task)}
 	return nil
 }

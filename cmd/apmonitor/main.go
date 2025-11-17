@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/demdxx/gocast/v2"
-	"github.com/olekukonko/tablewriter"
 	"github.com/rivo/tview"
 	cli "github.com/urfave/cli/v2"
 
+	"github.com/demdxx/asyncp/v2/cmd/apmonitor/tabledata"
 	"github.com/demdxx/asyncp/v2/monitor"
 	"github.com/demdxx/asyncp/v2/monitor/driver/redis"
 	"github.com/demdxx/asyncp/v2/monitor/kvstorage"
@@ -64,29 +64,31 @@ func runMonitor(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	iter := 0
 	ticker := time.NewTicker(interval)
 	app := tview.NewApplication()
-	textView := tview.NewTextView().
-		SetDynamicColors(true).
-		SetRegions(true).
-		SetWordWrap(true).
-		SetChangedFunc(func() { app.Draw() })
+
+	tableData := tabledata.NewTableData(nil)
+	tableData.SetHeaders([]string{"task", "min", "max", "avg", "success", "skip", "error", "total"})
+	table := tview.NewTable().
+		SetBorders(false).
+		SetSelectable(true, false).
+		SetContent(tableData)
 
 	go func() {
+		iter := 0
 		for {
 			select {
-			case <-c.Context.Done():
+			case <-c.Done():
 				ticker.Stop()
 				return
 			case <-ticker.C:
 				iter++
-				updateInfo(iter, textView, storage)
+				updateInfo(iter, app, tableData, storage)
 			}
 		}
 	}()
 
-	return app.SetRoot(textView, true).Run()
+	return app.SetRoot(table, true).EnableMouse(true).Run()
 }
 
 func connectStorage(connectURL, applicationName string) (monitor.ClusterInfoReader, error) {
@@ -107,9 +109,7 @@ func connectStorage(connectURL, applicationName string) (monitor.ClusterInfoRead
 	}
 }
 
-func updateInfo(iter int, textView *tview.TextView, info monitor.ClusterInfoReader) {
-	textView.Clear()
-
+func updateInfo(iter int, app *tview.Application, tableData *tabledata.TableData, info monitor.ClusterInfoReader) {
 	appInfo, _ := info.ApplicationInfo()
 	nodeCount := 0
 
@@ -143,24 +143,10 @@ func updateInfo(iter int, textView *tview.TextView, info monitor.ClusterInfoRead
 		sort.Slice(data, func(i, j int) bool { return data[i][0] < data[j][0] })
 	}
 
-	indicatror := ":"
-	if iter%2 == 0 {
-		indicatror = " "
-	}
-	table := tablewriter.NewWriter(textView)
-	table.SetHeader([]string{"task", "min", "max", "avg", "success", "skip", "error", "total"})
-	table.SetFooter([]string{"", "", "", "", "", "", "Nodes" + indicatror, gocast.Str(nodeCount)})
-	table.SetAutoWrapText(false)
-	table.SetAutoFormatHeaders(true)
-	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
-	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetCenterSeparator("")
-	table.SetColumnSeparator("")
-	table.SetRowSeparator("")
-	table.SetHeaderLine(false)
-	table.SetAutoMergeCells(false)
-	table.SetRowLine(false)
-	table.SetBorder(false)
-	table.AppendBulk(data)
-	table.Render()
+	tableData.SetData(data)
+	tableData.SetFooter([]string{"", "", "", "", "", "",
+		gocast.IfThen(iter%2 == 0, "Nodes ", "Nodes:"),
+		gocast.Str(nodeCount)})
+
+	app.Draw()
 }

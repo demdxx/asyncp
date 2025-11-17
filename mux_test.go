@@ -26,7 +26,7 @@ func TestMuxErrorPanic(t *testing.T) {
 	}))
 	_ = mux.Handle(`panic`, FuncTask(func(context.Context, Event, ResponseWriter) error { panic("test") }))
 	_ = mux.Handle(`panic>noop`, FuncTask(func(context.Context, Event, ResponseWriter) error { panic("noop") }))
-	_ = mux.Failver(FuncTask(func(context.Context, Event, ResponseWriter) error { isFailover = true; return nil }))
+	_ = mux.Failover(FuncTask(func(context.Context, Event, ResponseWriter) error { isFailover = true; return nil }))
 	_ = mux.Receive(mustMessageFrom(WithPayload(`error`, `test`)))
 	_ = mux.Receive(mustMessageFrom(WithPayload(`panic`, `test`)))
 	_ = mux.Receive(mustMessageFrom(WithPayload(`failover`, `test`)))

@@ -143,6 +143,7 @@ func (s *Storage) TaskInfoByID(id string) (*monitor.TaskInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+	taskInfo.ID = id
 	taskInfo.SuccessCount = taskInfo.TotalCount - taskInfo.ErrorCount - taskInfo.SkipCount
 	return taskInfo, nil
 }

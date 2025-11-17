@@ -63,7 +63,7 @@ func main() {
   )).Then(sendEmailTask)
 
   // Retranslate all message to the queue if can`t process
-  mx.Failver(asyncp.Retranslator(taskQueuePub))
+  mx.Failover(asyncp.Retranslator(taskQueuePub))
 
   // Alternative:
   // taskQueueSub.Subscribe(context.Background(), mx)

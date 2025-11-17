@@ -3,7 +3,7 @@ BUILD_GOARCH ?= $(or ${DOCKER_DEFAULT_GOARCH},amd64)
 BUILD_GOARM ?= 7
 BUILD_CGO_ENABLED ?= 0
 
-DOCKER_COMPOSE := docker-compose -f example/docker-compose.yml
+DOCKER_COMPOSE := docker compose -f example/docker-compose.yml
 DOCKER_CONTAINER_IMAGE="demdxx/asyncp-monitor:latest"
 GO111MODULE := on
 DOCKER_BUILDKIT := 1
