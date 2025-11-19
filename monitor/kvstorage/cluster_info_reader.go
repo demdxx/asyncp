@@ -80,7 +80,7 @@ func (s *ClusterInfoReader) TaskInfoByID(id string) (*monitor.TaskInfo, error) {
 	}
 	s.mx.RLock()
 	defer s.mx.RUnlock()
-	var taskInfo monitor.TaskInfo
+	taskInfo := monitor.TaskInfo{ID: id}
 	for _, storage := range storageList {
 		info, err := storage.TaskInfoByID(id)
 		if err != nil {

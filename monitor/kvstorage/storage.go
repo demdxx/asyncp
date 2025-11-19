@@ -138,7 +138,7 @@ func (s *Storage) TaskInfo(name string) (*monitor.TaskInfo, error) {
 
 // TaskInfoByID returns information about the particular task
 func (s *Storage) TaskInfoByID(id string) (*monitor.TaskInfo, error) {
-	taskInfo := &monitor.TaskInfo{}
+	taskInfo := &monitor.TaskInfo{ID: id}
 	err := s.getJSON(s.metricKey(id), &taskInfo)
 	if err != nil {
 		return nil, err

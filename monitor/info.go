@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"slices"
 	"strings"
 	"time"
 
@@ -103,10 +104,8 @@ func (task *TaskInfo) Add(info *TaskInfo) {
 
 // AddTaskName to the list
 func (task *TaskInfo) AddTaskName(name string) {
-	for _, taskName := range task.TaskNames {
-		if taskName == name {
-			return
-		}
+	if slices.Contains(task.TaskNames, name) {
+		return
 	}
 	task.TaskNames = append(task.TaskNames, name)
 	task.touch()
