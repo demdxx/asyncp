@@ -204,11 +204,8 @@ func (srv *TaskMux) ExecuteEvent(event Event) error {
 // FinishInit of the task server
 func (srv *TaskMux) FinishInit() error {
 	if srv.cluster != nil {
-		ctx := srv.mainExecContext
-		if ctx == nil {
-			ctx = context.Background()
-		}
-		return srv.cluster.RegisterApplication(ctx, srv)
+		return srv.cluster.RegisterApplication(
+			srv.newExecContext(), srv)
 	}
 	return nil
 }

@@ -9,6 +9,12 @@ import (
 // Publisher writing interface
 type Publisher = notificationcenter.Publisher
 
+// PublisherExtended extended publisher interface
+type PublisherExtended interface {
+	Publisher
+	PublishAndReturnIDs(ctx context.Context, messages ...any) ([]string, error)
+}
+
 // DefaultRetranslateCount shows amount of event repeating in the pipeline
 const DefaultRetranslateCount = 30
 
@@ -54,17 +60,19 @@ type publisherEventWrapper struct {
 }
 
 // PublisherEventWrapper with fixed event name
-func PublisherEventWrapper(eventName string, publisher Publisher) Publisher {
+func PublisherEventWrapper(eventName string, publisher Publisher) PublisherExtended {
 	return &publisherEventWrapper{
 		name: eventName,
 		pub:  publisher,
 	}
 }
 
+// SetMux sets task mux to the event wrapper
 func (wr *publisherEventWrapper) SetMux(mux *TaskMux) {
 	wr.mux = mux
 }
 
+// Publish event with fixed name
 func (wr *publisherEventWrapper) Publish(ctx context.Context, messages ...any) error {
 	events := make([]any, 0, len(messages))
 	for _, msg := range messages {
@@ -73,4 +81,20 @@ func (wr *publisherEventWrapper) Publish(ctx context.Context, messages ...any) e
 		events = append(events, event)
 	}
 	return wr.pub.Publish(ctx, events...)
+}
+
+// PublishAndReturnIDs event with fixed name and return generated IDs
+func (wr *publisherEventWrapper) PublishAndReturnIDs(ctx context.Context, messages ...any) ([]string, error) {
+	events := make([]any, 0, len(messages))
+	ids := make([]string, 0, len(messages))
+	for _, msg := range messages {
+		event := WithPayload(wr.name, msg)
+		event.SetMux(wr.mux)
+		events = append(events, event)
+		ids = append(ids, event.ID().String())
+	}
+	if err := wr.pub.Publish(ctx, events...); err != nil {
+		return nil, err
+	}
+	return ids, nil
 }

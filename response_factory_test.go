@@ -13,6 +13,9 @@ type testPublisher struct{ name string }
 
 func (p *testPublisher) String() string                                     { return p.name }
 func (p *testPublisher) Publish(ctx context.Context, messages ...any) error { return nil }
+func (p *testPublisher) PublishAndReturnIDs(ctx context.Context, messages ...any) ([]string, error) {
+	return nil, nil
+}
 
 func TestMultistreamResponseFactory(t *testing.T) {
 	fc := NewMultistreamResponseFactory(
