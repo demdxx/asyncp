@@ -126,7 +126,7 @@ func ExtFuncTask(f any) FuncTask {
 }
 
 func newValue(t reflect.Type) (reflect.Value, any) {
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		return newValue(t.Elem())
 	}
 	v := reflect.New(t)

@@ -61,7 +61,7 @@ func (p *valuePayload) MarshalJSON() ([]byte, error) {
 }
 
 func valueFinal(v reflect.Value) reflect.Value {
-	for v.IsValid() && (v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface) && !v.IsNil() {
+	for v.IsValid() && (v.Kind() == reflect.Pointer || v.Kind() == reflect.Interface) && !v.IsNil() {
 		v = v.Elem()
 	}
 	return v
