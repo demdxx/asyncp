@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/geniusrabbit/notificationcenter/v2"
+	"go.uber.org/multierr"
 )
 
 // Receiver defines the processing interface.
@@ -41,14 +42,20 @@ func (prx *ProxySubscriber) Subscribe(ctx context.Context, h Receiver) error {
 
 // Listen starts processing queue
 func (prx *ProxySubscriber) Listen(ctx context.Context) (err error) {
-	var w sync.WaitGroup
+	var (
+		w  sync.WaitGroup
+		mx sync.Mutex
+	)
 	for _, sub := range prx.subs {
 		w.Add(1)
 		go func(sub Subscriber) {
-			if err = sub.Listen(ctx); err != nil {
-				log.Printf("%t: %s", sub, err.Error())
+			defer w.Done()
+			if lerr := sub.Listen(ctx); lerr != nil {
+				log.Printf("%v: %s", sub, lerr.Error())
+				mx.Lock()
+				err = multierr.Append(err, lerr)
+				mx.Unlock()
 			}
-			w.Done()
 		}(sub)
 	}
 	w.Wait()

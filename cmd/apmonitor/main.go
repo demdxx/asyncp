@@ -1,3 +1,5 @@
+// Command apmonitor renders a terminal UI dashboard with live metrics for
+// asyncp task processing clusters, reading state from a monitor.ClusterInfoReader.
 package main
 
 import (

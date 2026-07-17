@@ -16,6 +16,35 @@ type ResponseWriterFactory interface {
 	Release(w ResponseWriter)
 }
 
+// newResponseWriterPool returns a pool of the shared responseWriter type
+// used by every factory implementation in this file.
+func newResponseWriterPool() sync.Pool {
+	return sync.Pool{New: func() any { return &responseWriter{} }}
+}
+
+// borrowFromPool takes a writer out of the pool and fills in the common fields.
+func borrowFromPool(pool *sync.Pool, ctx context.Context, mux *TaskMux, releasePool responseWriterRelseasePool, promise Promise, event Event) *responseWriter {
+	wr := pool.Get().(*responseWriter)
+	wr.ctx = ctx
+	wr.event = event
+	wr.promise = promise
+	wr.mux = mux
+	wr.pool = releasePool
+	return wr
+}
+
+// releaseToPool clears and returns the writer to the pool, mirroring the
+// previous behaviour of only pooling writers that were actually borrowed.
+func releaseToPool(pool *sync.Pool, w ResponseWriter) {
+	if w == nil {
+		return
+	}
+	if wr, ok := w.(*responseWriter); ok && wr.event != nil {
+		wr.reset()
+		pool.Put(wr)
+	}
+}
+
 type streamResponseFactory struct {
 	pool      sync.Pool
 	publisher Publisher
@@ -26,9 +55,7 @@ type streamResponseFactory struct {
 func NewStreamResponseFactory(publisher Publisher) ResponseWriterFactory {
 	return &streamResponseFactory{
 		publisher: publisher,
-		pool: sync.Pool{
-			New: func() any { return &responseStreamWriter{} },
-		},
+		pool:      newResponseWriterPool(),
 	}
 }
 
@@ -37,28 +64,15 @@ func (s *streamResponseFactory) SetMux(mux *TaskMux) {
 }
 
 func (s *streamResponseFactory) Borrow(ctx context.Context, promise Promise, event Event) ResponseWriter {
-	wr := s.pool.Get().(*responseStreamWriter)
-	wr.ctx = ctx
-	wr.event = event
-	wr.promise = promise
-	wr.wstream = s.publisher
-	wr.mux = s.mux
-	wr.pool = s
+	wr := borrowFromPool(&s.pool, ctx, s.mux, s, promise, event)
+	wr.dispatch = func(ctx context.Context, ev Event) error {
+		return s.publisher.Publish(ctx, ev)
+	}
 	return wr
 }
 
 func (s *streamResponseFactory) Release(w ResponseWriter) {
-	if w == nil {
-		return
-	}
-	if wr := w.(*responseStreamWriter); wr.event != nil {
-		wr.ctx = nil
-		wr.event = nil
-		wr.wstream = nil
-		wr.pool = nil
-		wr.mux = nil
-		s.pool.Put(wr)
-	}
+	releaseToPool(&s.pool, w)
 }
 
 type proxyResponseFactory struct {
@@ -69,9 +83,7 @@ type proxyResponseFactory struct {
 // NewProxyResponseFactory returns
 func NewProxyResponseFactory() ResponseWriterFactory {
 	return &proxyResponseFactory{
-		pool: sync.Pool{
-			New: func() any { return &responseProxyWriter{} },
-		},
+		pool: newResponseWriterPool(),
 	}
 }
 
@@ -80,25 +92,15 @@ func (s *proxyResponseFactory) SetMux(mux *TaskMux) {
 }
 
 func (s *proxyResponseFactory) Borrow(ctx context.Context, promise Promise, event Event) ResponseWriter {
-	wr := s.pool.Get().(*responseProxyWriter)
-	wr.event = event
-	wr.promise = promise
-	wr.pool = s
-	wr.mux = s.mux
+	wr := borrowFromPool(&s.pool, ctx, s.mux, s, promise, event)
+	wr.dispatch = func(_ context.Context, ev Event) error {
+		return wr.mux.ExecuteEvent(ev)
+	}
 	return wr
 }
 
 func (s *proxyResponseFactory) Release(w ResponseWriter) {
-	if w == nil {
-		return
-	}
-	if wr := w.(*responseProxyWriter); wr.event != nil {
-		wr.promise = nil
-		wr.event = nil
-		wr.pool = nil
-		wr.mux = nil
-		s.pool.Put(wr)
-	}
+	releaseToPool(&s.pool, w)
 }
 
 type multistreamItem struct {
@@ -173,9 +175,7 @@ func NewMultistreamResponseFactory(streams ...any) ResponseWriterFactory {
 	}
 	return &mutistreamResponseFactory{
 		publishers: publishers,
-		pool: sync.Pool{
-			New: func() any { return &responseStreamWriter{} },
-		},
+		pool:       newResponseWriterPool(),
 	}
 }
 
@@ -184,26 +184,19 @@ func (s *mutistreamResponseFactory) SetMux(mux *TaskMux) {
 }
 
 func (s *mutistreamResponseFactory) Borrow(ctx context.Context, promise Promise, event Event) ResponseWriter {
-	wr := s.pool.Get().(*responseStreamWriter)
-	wr.event = event
-	wr.promise = promise
-	wr.wstream = s.publisher(event)
-	wr.mux = s.mux
-	wr.pool = s
+	wr := borrowFromPool(&s.pool, ctx, s.mux, s, promise, event)
+	pub := s.publisher(event)
+	wr.dispatch = func(ctx context.Context, ev Event) error {
+		if pub == nil {
+			return nil
+		}
+		return pub.Publish(ctx, ev)
+	}
 	return wr
 }
 
 func (s *mutistreamResponseFactory) Release(w ResponseWriter) {
-	if w == nil {
-		return
-	}
-	if wr := w.(*responseStreamWriter); wr.event != nil {
-		wr.event = nil
-		wr.wstream = nil
-		wr.pool = nil
-		wr.mux = nil
-		s.pool.Put(wr)
-	}
+	releaseToPool(&s.pool, w)
 }
 
 func (s *mutistreamResponseFactory) publisher(event Event) Publisher {
@@ -213,4 +206,65 @@ func (s *mutistreamResponseFactory) publisher(event Event) Publisher {
 		}
 	}
 	return nil
+}
+
+// StreamPublisherSelectorFnk picks the Publisher that should receive the
+// response of the given promise/event pair. It's evaluated once per borrowed
+// response writer, so the decision may depend on the event name, its
+// payload, or the promise it belongs to.
+type StreamPublisherSelectorFnk func(ctx context.Context, promise Promise, event Event) Publisher
+
+type streamResponseSwitcher struct {
+	pool     sync.Pool
+	selector StreamPublisherSelectorFnk
+	mux      *TaskMux
+}
+
+// NewStreamResponseSwitcher returns a ResponseWriterFactory which routes each
+// response to a Publisher picked at runtime by the selector function. Unlike
+// NewMultistreamResponseFactory (pattern/regexp matching on the event name),
+// the selector receives full context and can implement arbitrary branching
+// logic, e.g. sending `video.parse` events to one stream and `xml.parse`
+// events to another:
+//
+//	asyncp.NewStreamResponseSwitcher(func(_ context.Context, _ asyncp.Promise, event asyncp.Event) asyncp.Publisher {
+//		switch event.Name() {
+//		case "video.parse":
+//			return videoPublisher
+//		case "xml.parse":
+//			return xmlPublisher
+//		default:
+//			return defaultPublisher
+//		}
+//	})
+//
+// If the selector returns nil, the response is silently dropped.
+func NewStreamResponseSwitcher(selector StreamPublisherSelectorFnk) ResponseWriterFactory {
+	if selector == nil {
+		panic("asyncp: NewStreamResponseSwitcher requires a non-nil selector")
+	}
+	return &streamResponseSwitcher{
+		selector: selector,
+		pool:     newResponseWriterPool(),
+	}
+}
+
+func (s *streamResponseSwitcher) SetMux(mux *TaskMux) {
+	s.mux = mux
+}
+
+func (s *streamResponseSwitcher) Borrow(ctx context.Context, promise Promise, event Event) ResponseWriter {
+	wr := borrowFromPool(&s.pool, ctx, s.mux, s, promise, event)
+	pub := s.selector(ctx, promise, event)
+	wr.dispatch = func(ctx context.Context, ev Event) error {
+		if pub == nil {
+			return nil
+		}
+		return pub.Publish(ctx, ev)
+	}
+	return wr
+}
+
+func (s *streamResponseSwitcher) Release(w ResponseWriter) {
+	releaseToPool(&s.pool, w)
 }

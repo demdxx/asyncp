@@ -21,8 +21,8 @@ func newDefaultEventAllocator() *defaultEventAllocator {
 }
 
 func (a *defaultEventAllocator) Decode(msg Message) (Event, error) {
-	event := &event{}
-	return event, event.Decode(msg.Body())
+	ev := a.pool.Get().(*event)
+	return ev, ev.Decode(msg.Body())
 }
 
 func (a *defaultEventAllocator) Release(e Event) error {

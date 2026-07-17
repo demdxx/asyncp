@@ -1,3 +1,6 @@
+// Command counter is a demo asyncp application that periodically increments
+// a counter and reports the metrics of that processing to a Redis-backed
+// cluster monitor.
 package main
 
 import (

@@ -212,13 +212,16 @@ func (srv *TaskMux) FinishInit() error {
 
 // Close task schedule and all subtasks
 func (srv *TaskMux) Close() error {
+	if srv == nil {
+		return nil
+	}
 	if srv.cluster != nil {
 		_ = srv.cluster.UnregisterApplication()
 	}
-	var err error
-	if srv == nil || srv.tasks == nil {
+	if srv.tasks == nil {
 		return nil
 	}
+	var err error
 	for _, promise := range srv.tasks {
 		if closer, ok := promise.(io.Closer); ok {
 			err = multierr.Append(err, closer.Close())
@@ -262,7 +265,11 @@ func (srv *TaskMux) CompleteTasks(event Event) (totalTasks, completedTasks []str
 
 func (srv *TaskMux) borrowResponseWriter(ctx context.Context, prom Promise, event Event) ResponseWriter {
 	if srv.responseFactory == nil {
-		return &responseProxyWriter{mux: srv, event: event, promise: prom}
+		wr := &responseWriter{ctx: ctx, mux: srv, event: event, promise: prom}
+		wr.dispatch = func(_ context.Context, ev Event) error {
+			return wr.mux.ExecuteEvent(ev)
+		}
+		return wr
 	}
 	return srv.responseFactory.Borrow(ctx, prom, event)
 }

@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	liberrors "github.com/demdxx/asyncp/v2/libs/errors"
 )
 
 // Event provides interface of working with message streams
@@ -301,7 +303,7 @@ func (ev *event) Encode() ([]byte, error) {
 		DoneEvents:       ev.doneEvents,
 		SendCount:        ev.sendCount,
 		RetranslateCount: ev.retranslateCount,
-		Err:              errorString(err),
+		Err:              liberrors.ErrorString(err),
 		CreatedAt:        ev.createdAt,
 	})
 	if err != nil {
@@ -317,12 +319,12 @@ func (ev *event) Decode(data []byte) error {
 		err  = json.NewDecoder(bytes.NewBuffer(data)).Decode(&item)
 	)
 	if err != nil {
-		return nil
+		return err
 	}
 	ev.id = item.ID
 	ev.name = item.Name
 	ev.payload, err = newPayload(item.Payload)
-	ev.err = stringError(item.Err)
+	ev.err = liberrors.StringError(item.Err)
 	ev.createdAt = item.CreatedAt
 	if err != nil {
 		return err
@@ -330,11 +332,20 @@ func (ev *event) Decode(data []byte) error {
 	return nil
 }
 
-// Clear event object
+// Clear event object, resetting it to the zero value so it can be safely
+// reused from the pool by defaultEventAllocator.
 func (ev *event) Clear() {
+	ev.complete = false
+	ev.id = uuid.UUID{}
 	ev.name = ""
+	ev.doneEvents = ev.doneEvents[:0]
+	ev.mux = nil
+	ev.promise = nil
 	ev.payload = nil
+	ev.sendCount = 0
+	ev.retranslateCount = 0
 	ev.err = nil
+	ev.createdAt = time.Time{}
 }
 
 // UnmarshalJSON implements and wraps json.Unmarshaler interface

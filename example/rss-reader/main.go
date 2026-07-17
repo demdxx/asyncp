@@ -1,3 +1,5 @@
+// Command rss-reader is a demo asyncp pipeline that downloads an RSS feed,
+// fetches every linked item, and prints a summary once all items are processed.
 package main
 
 import (

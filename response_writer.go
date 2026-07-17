@@ -41,14 +41,25 @@ func (f ResponseHandlerFnk) Release() error {
 	return nil
 }
 
-type responseProxyWriter struct {
-	event   Event
-	promise Promise
-	mux     *TaskMux
-	pool    responseWriterRelseasePool
+// dispatchFnk delivers the prepared event to its final destination.
+// It's the only thing that actually differs between the response writer
+// flavours (proxy back into the local mux vs publish to an external
+// stream), so every factory below shares the same `responseWriter` type
+// and just plugs in a different dispatchFnk.
+type dispatchFnk func(ctx context.Context, event Event) error
+
+// responseWriter is the single ResponseWriter implementation shared by
+// streamResponseFactory, proxyResponseFactory and mutistreamResponseFactory.
+type responseWriter struct {
+	ctx      context.Context
+	event    Event
+	promise  Promise
+	mux      *TaskMux
+	pool     responseWriterRelseasePool
+	dispatch dispatchFnk
 }
 
-func (wr *responseProxyWriter) WriteResonse(value any) error {
+func (wr *responseWriter) WriteResonse(value any) error {
 	var (
 		err    error
 		events = wr.promise.TargetEventName()
@@ -62,11 +73,11 @@ func (wr *responseProxyWriter) WriteResonse(value any) error {
 	return err
 }
 
-func (wr *responseProxyWriter) RepeatWithResponse(value any) error {
+func (wr *responseWriter) RepeatWithResponse(value any) error {
 	return wr.writeResonseWithEventName(wr.promise.EventName(), value, true)
 }
 
-func (wr *responseProxyWriter) writeResonseWithEventName(name string, value any, repeat bool) error {
+func (wr *responseWriter) writeResonseWithEventName(name string, value any, repeat bool) error {
 	var ev Event
 	switch v := value.(type) {
 	case Event:
@@ -83,73 +94,29 @@ func (wr *responseProxyWriter) writeResonseWithEventName(name string, value any,
 		ev = ev.After(wr.event)
 	}
 	ev.SetMux(wr.mux)
-	return wr.mux.ExecuteEvent(ev)
+	return wr.dispatch(wr.execContext(), ev)
 }
 
-func (wr *responseProxyWriter) Release() error {
+func (wr *responseWriter) Release() error {
 	if wr.pool != nil {
 		wr.pool.Release(wr)
 	}
 	return nil
 }
 
-type responseStreamWriter struct {
-	ctx     context.Context
-	event   Event
-	promise Promise
-	wstream Publisher
-	pool    responseWriterRelseasePool
-	mux     *TaskMux
-}
-
-func (wr *responseStreamWriter) WriteResonse(value any) error {
-	var (
-		err    error
-		events = wr.promise.TargetEventName()
-	)
-	for _, eventName := range events {
-		err = multierr.Append(err, wr.writeResonseWithEventName(eventName, value, false))
-	}
-	if len(events) == 0 {
-		err = multierr.Append(err, wr.writeResonseWithEventName("", value, false))
-	}
-	return err
-}
-
-func (wr *responseStreamWriter) RepeatWithResponse(value any) error {
-	return wr.writeResonseWithEventName(wr.promise.EventName(), value, true)
-}
-
-func (wr *responseStreamWriter) writeResonseWithEventName(name string, value any, repeat bool) error {
-	var ev Event
-	switch v := value.(type) {
-	case Event:
-		ev = v
-	default:
-		ev = wr.event.WithPayload(value)
-	}
-	if name != "" || !repeat {
-		ev = ev.WithName(name)
-	}
-	if repeat {
-		ev = ev.Repeat(wr.event)
-	} else {
-		ev = ev.After(wr.event)
-	}
-	ev.SetMux(wr.mux)
-	return wr.wstream.Publish(wr.getExecContext(), ev)
-}
-
-func (wr *responseStreamWriter) Release() error {
-	if wr.pool != nil {
-		wr.pool.Release(wr)
-	}
-	return nil
-}
-
-func (wr *responseStreamWriter) getExecContext() context.Context {
+func (wr *responseWriter) execContext() context.Context {
 	if wr.ctx != nil {
 		return wr.ctx
 	}
 	return context.Background()
+}
+
+// reset clears all borrowed state before the writer goes back to its pool.
+func (wr *responseWriter) reset() {
+	wr.ctx = nil
+	wr.event = nil
+	wr.promise = nil
+	wr.mux = nil
+	wr.pool = nil
+	wr.dispatch = nil
 }

@@ -9,27 +9,26 @@ on:
     branches:
       - master
       - main
+  workflow_dispatch:
 
-env:
-  GO_VERSION: 1.24
+permissions:
+  contents: read
 
 name: run tests
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-    - name: Install Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: ${{ env.GO_VERSION }}
-    - name: Checkout code
-      uses: actions/checkout@v3
-    - name: Run linters
-      uses: golangci/golangci-lint-action@v6
-      with:
-        version: latest
-        skip-cache: true
-        args: --fix
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Install Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Run linters
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: latest
 
   test:
     needs: lint
@@ -38,30 +37,35 @@ jobs:
         platform: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.platform }}
     steps:
-    - name: Install Go
-      if: success()
-      uses: actions/setup-go@v5
-      with:
-        go-version: ${{ env.GO_VERSION }}
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Run tests
-      run: go test -v -covermode=count
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Install Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Run tests
+        run: go test -v ./...
+      - name: Run tests with race detector
+        if: matrix.platform == 'ubuntu-latest'
+        run: go test -race ./...
 
   coverage:
     runs-on: ubuntu-latest
     needs: test
     steps:
-      - uses: actions/setup-go@v5
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Install Go
+        uses: actions/setup-go@v6
         with:
-          go-version: ${{ env.GO_VERSION }}
-      - uses: actions/checkout@v4
-      - run: go test -v -coverprofile=profile.cov ./...
+          go-version-file: go.mod
+      - name: Run tests with coverage
+        run: go test -v -covermode=count -coverprofile=profile.cov ./...
       - name: Send coverage
         uses: shogo82148/actions-goveralls@v1
         with:
           path-to-profile: profile.cov
-          flag-name: Go-${{ env.GO_VERSION }}
+          flag-name: unit
           parallel: true
 
   # notifies that all test jobs are finished.

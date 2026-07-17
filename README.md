@@ -2,12 +2,24 @@
 
 [![Build Status](https://github.com/demdxx/asyncp/workflows/run%20tests/badge.svg)](https://github.com/demdxx/asyncp/actions?workflow=run%20tests)
 [![Coverage Status](https://coveralls.io/repos/github/demdxx/asyncp/badge.svg?branch=master)](https://coveralls.io/github/demdxx/asyncp?branch=master)
-[![Go Report Card](https://goreportcard.com/badge/github.com/demdxx/asyncp)](https://goreportcard.com/report/github.com/demdxx/asyncp)
-[![GoDoc](https://godoc.org/github.com/demdxx/asyncp?status.svg)](https://godoc.org/github.com/demdxx/asyncp)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/demdxx/asyncp/v2)](https://pkg.go.dev/github.com/demdxx/asyncp/v2)
 
 > License Apache 2.0
 
 The simple framework to build async task execution programs.
+
+- Chain handlers into pipelines with automatic event routing between steps
+- Run tasks synchronously or offload them to a worker pool via `Async()`
+- Publish/subscribe over pluggable transports: in-memory (`gochan`), NATS, Kafka, Redis
+- Scale horizontally in cluster mode, with live state in `apmonitor`
+
+## Installation
+
+```bash
+go get github.com/demdxx/asyncp/v2
+```
+
+Requires Go 1.25 or newer (see `go.mod`).
 
 ## Pipelines
 
@@ -33,8 +45,8 @@ func main() {
 
   // Create new async multiplexer
   mx := asyncp.NewTaskMux(
-    // Define default strem message queue
-    asyncp.WithStreamResponseFactory(taskQueuePub),
+    // Define default stream message queue
+    asyncp.WithStreamResponsePublisher(taskQueuePub),
     asyncp.WithPanicHandler(...),
     asyncp.WithErrorHandler(...),
     asyncp.WithCluster(...),
@@ -63,7 +75,7 @@ func main() {
   )).Then(sendEmailTask)
 
   // Retranslate all message to the queue if can`t process
-  mx.Failover(asyncp.Retranslator(taskQueuePub))
+  mx.Failover(asyncp.Retranslator(0, taskQueuePub))
 
   // Alternative:
   // taskQueueSub.Subscribe(context.Background(), mx)
@@ -112,3 +124,29 @@ func main() {
 Displays state of the cluster and every task common state.
 
 ![apmonitor tool](docs/apmonitor.png "Apmonitor")
+
+## Streams / transports
+
+The [`streams`](streams) package wires a `TaskMux` to a message transport via
+`streams.ListenAndServe`. Supported backends:
+
+- `gochan` — in-memory buffered channel, useful for tests and single-process demos
+- `nats` — NATS / NATS JetStream
+- `kafka` — Apache Kafka
+- `redis` — Redis streams
+
+## Examples
+
+Runnable demos live under [`example`](example):
+
+- [`example/counter`](example/counter) — periodically increments a counter and
+  reports processing metrics to a Redis-backed cluster monitor
+- [`example/rss-reader`](example/rss-reader) — downloads an RSS feed, fetches
+  every linked item concurrently through a pipeline, and prints a summary
+
+## Development
+
+```bash
+make test  # go test -race ./...
+make lint  # golangci-lint run ./...
+```

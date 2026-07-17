@@ -187,6 +187,9 @@ func (cluster *Cluster) ExecEvent(failover bool, event Event, execTime time.Dura
 
 // TargetEventsAfter returns list of events to execute after the current event
 func (cluster *Cluster) TargetEventsAfter(eventName string) []string {
+	if cluster == nil {
+		return nil
+	}
 	cluster.mx.RLock()
 	defer cluster.mx.RUnlock()
 	if cluster.taskMap == nil {
@@ -197,6 +200,9 @@ func (cluster *Cluster) TargetEventsAfter(eventName string) []string {
 
 // AllTasks returns all events and links
 func (cluster *Cluster) AllTasks() map[string][]string {
+	if cluster == nil {
+		return nil
+	}
 	cluster.mx.RLock()
 	defer cluster.mx.RUnlock()
 	if cluster.appInfo == nil {
